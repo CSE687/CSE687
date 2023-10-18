@@ -12,7 +12,7 @@ folder.
 
 ```
 docker build -t ubu .
-docker run --rm -it -v $(pwd)/src:/home/vscode -v $(pwd)/tests:/home/vscode/tests ubu /bin/bash
+docker run -dt -v $(pwd)/src:/home/vscode -v $(pwd)/tests:/home/vscode/tests ubu
 ```
 
 ## Project 1
