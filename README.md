@@ -2,6 +2,19 @@
 
 Winter 2023 class project
 
+
+## Quickstart
+
+Of course, you can name things anything you want, but the following is an example.
+Starting from the project root folder, this will build a docker image called `ubu`,
+and then mounts some volumes that you can access in the container's `/home/vscode`
+folder.
+
+```
+docker build -t ubu .
+docker run --rm -it -v $(pwd)/src:/home/vscode -v $(pwd)/tests:/home/vscode/tests ubu /bin/bash
+```
+
 ## Project 1
 
 - Input: Input Directory, Output Directory, Temp Directory for Intermediates

@@ -14,6 +14,8 @@
 #include <vector>
 #include <algorithm>
 
+#ifndef REDUCE_H
+#define REDUCE_H
 class Reduce
 {
 public:
@@ -30,3 +32,4 @@ private:
 
     std::string _output_dir;
 };
+#endif
