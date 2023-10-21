@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE TestReduce
 #include <boost/test/included/unit_test.hpp>
-#include "../Reduce.h"
+#include "../src/Reduce.h"
 
 #include <string>
 #include <vector>

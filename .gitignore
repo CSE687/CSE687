@@ -31,3 +31,6 @@
 *.out
 *.app
 bin/**
+
+# MacOS directory metadata
+.DS_Store
