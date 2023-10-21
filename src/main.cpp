@@ -4,6 +4,9 @@
 
 #include "Reduce.h"
 
+// Input Dir
+// Output Dir
+// Temp Dir
 int main(int argc, char *argv[])
 {
     BOOST_LOG_TRIVIAL(trace) << "A trace severity message";
