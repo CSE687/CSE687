@@ -7,18 +7,23 @@ build:
 	-std=c++11 \
 	-DBOOST_LOG_DYN_LINK -lboost_log -lboost_log_setup -lboost_thread -lboost_system -lboost_filesystem
 
+run: build
+	@ ./bin/$N.out workdir/input workdir/output workdir/temp
+
 build-test:
 	@ g++ src/Reduce.cpp tests/*.cpp -o bin/test
 
-run-test: build-test
+run-test: build build-test
 	@ ./bin/test
+	@ ./bin/$N.out tests/workdir/input tests/workdir/output tests/workdir/temp
 
-run: build
-	@ ./bin/$N.out
+# debug:
+# 	@ g++ *.cpp -o $N.out -ggdb
 
-debug:
-	@ g++ *.cpp -o $N.out -ggdb
-
-archive:
-	zip $N.zip *.cpp *.h *.png Makefile
-	mv $N.zip ~/Downloads/
+# Remove compiled binaries, output files, and temp files
+clean:
+	@ find ./bin/ ! -name '.gitignore' -type f -exec rm -f {} +
+	@ find tests/workdir/output ! -name '.gitignore' -type f -exec rm -f {} +
+	@ find tests/workdir/temp ! -name '.gitignore' -type f -exec rm -f {} +
+	@ find workdir/output ! -name '.gitignore' -type f -exec rm -f {} +
+	@ find workdir/temp ! -name '.gitignore' -type f -exec rm -f {} +

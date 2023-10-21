@@ -1,4 +1,4 @@
-#include "Reduce.h"
+#include "Reduce.hpp"
 
 #include <boost/format.hpp>
 #include <iostream>

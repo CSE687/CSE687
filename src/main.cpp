@@ -1,7 +1,7 @@
 #include <boost/log/trivial.hpp>
 
 #include "FileManager.hpp"
-#include "Reduce.h"
+#include "Reduce.hpp"
 
 void help() {
     std::cout << "INPUT ERROR: Your inputs for the program should be as follows: program.out <1> <2> <3>\n";
@@ -21,19 +21,16 @@ int main(int argc, char* argv[]) {
             for (std::string i : input_files) {
                 std::cout << "\t" << i << std::endl;
             }
-            std::cout << std::endl
-                      << std::endl;
+            std::cout << std::endl;
 
-            std::cout << "Reading first file in directory: " << input_files[2] << std::endl;
-            std::vector<std::string> file_lines = filemanager->readFile(input_files[2]);
+            std::cout << "Reading first file in directory: " << input_files[0] << std::endl;
+            std::vector<std::string> file_lines = filemanager->readFile(input_files[0]);
             for (std::string i : file_lines) {
                 std::cout << i << std::endl;
             }
-            std::cout << std::endl
-                      << std::endl;
+            std::cout << std::endl;
 
-            std::cout << "Copying file to write: " << input_files[2] << std::endl
-                      << std::endl;
+            std::cout << "Copying file to write: " << input_files[0] << std::endl;
             filemanager->writeFile(filemanager->getOutputDirectory(), "file_copy.txt", file_lines);
 
         } else {
@@ -45,7 +42,6 @@ int main(int argc, char* argv[]) {
 
     // std::vector<int> values = {1, 2, 3};
     // std::string output_dir = "some/path/somewhere";
-
     // reduce.reduce("Hello", values);
 
     return 0;
