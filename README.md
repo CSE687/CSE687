@@ -32,7 +32,10 @@ docker run -dt -v $(pwd)/src:/home/vscode -v $(pwd)/tests:/home/vscode/tests ubu
     - Files
       - FileManager.h
       - FileManager.cpp
-    - Dev:
+    - Dev: Chandler
+      - Looking into a Singleton pattern for FileManager
+        - [ ] Separate components instantiating FileManager retrieve a shared object
+        - [ ] FileManager takes String/Filename and writes the string to the filename
   - Map
     - Files
       - Map.h
