@@ -3,9 +3,9 @@ N=project-01
 all: build run
 
 build:
-	@ g++ *.cpp -o $N.out \
+	@ g++ *.cpp FileManager/*.cpp -o $N.out \
 	-std=c++11 \
-	-DBOOST_LOG_DYN_LINK -lboost_log -lboost_log_setup -lboost_thread -lboost_system
+	-DBOOST_LOG_DYN_LINK -lboost_log -lboost_log_setup -lboost_thread -lboost_system -lboost_filesystem
 
 build-test:
 	@ g++ Reduce.cpp tests/*.cpp -o bin/test
