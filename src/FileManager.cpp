@@ -4,7 +4,7 @@
 FileManager* FileManager::instance{nullptr};
 std::mutex FileManager::mutex_;
 
-FileManager *FileManager::GetInstance(const std::string& input, const std::string& output, const std::string& temp) {
+FileManager* FileManager::GetInstance(const std::string& input, const std::string& output, const std::string& temp) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (instance == nullptr) {
         instance = new FileManager(input, output, temp);
@@ -12,9 +12,9 @@ FileManager *FileManager::GetInstance(const std::string& input, const std::strin
     return instance;
 }
 
-FileManager *FileManager::GetInstance() {
+FileManager* FileManager::GetInstance() {
     if (instance == nullptr) {
-        std::cerr << "Unable to instantiate File Manager, need to input arguments.\n"; 
+        std::cerr << "Unable to instantiate File Manager, need to input arguments.\n";
     } else {
         return instance;
     }
@@ -69,11 +69,12 @@ void FileManager::writeFile(std::string filepath, std::string filename, std::vec
     std::ofstream write_file(full_file_path);
 
     if (write_file.is_open()) {
-        for (std::string i: file_lines) {
+        for (std::string i : file_lines) {
             write_file << i << std::endl;
         }
+    } else {
+        std::cerr << "Unable to open file\n";
     }
-    else { std::cerr << "Unable to open file\n"; }
     write_file.close();
 }
 

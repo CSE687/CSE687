@@ -1,14 +1,15 @@
 
 #include <boost/filesystem.hpp>
-#include <vector>
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <vector>
 
 class FileManager {
-private:
-    static FileManager * instance;
+   private:
+    static FileManager *instance;
     static std::mutex mutex_;
-protected:
+
+   protected:
     std::string input_directory;
     std::string output_directory;
     std::string temp_directory;
@@ -17,10 +18,11 @@ protected:
         output_directory = output;
         temp_directory = temp;
     }
-public:
+
+   public:
     FileManager(FileManager &other) = delete;
     void operator=(const FileManager &) = delete;
-    static FileManager *GetInstance(const std::string& input, const std::string& output, const std::string& temp);
+    static FileManager *GetInstance(const std::string &input, const std::string &output, const std::string &temp);
     static FileManager *GetInstance();
     std::string getInputDirectory();
     std::string getOutputDirectory();
