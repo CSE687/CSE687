@@ -2,17 +2,6 @@
 
 Winter 2023 class project
 
-## Quickstart
-
-Of course, you can name things anything you want, but the following is an example.
-Starting from the project root folder, this will build a docker image called `ubu`,
-and then mounts some volumes that you can access in the container's `/home/vscode`
-folder.
-
-```
-docker build -t ubu .
-docker run -dt -v $(pwd)/src:/home/vscode -v $(pwd)/tests:/home/vscode/tests ubu
-```
 
 ## Project 1
 
@@ -32,7 +21,10 @@ docker run -dt -v $(pwd)/src:/home/vscode -v $(pwd)/tests:/home/vscode/tests ubu
     - Files
       - FileManager.h
       - FileManager.cpp
-    - Dev:
+    - Dev: Chandler
+      - Looking into a Singleton pattern for FileManager
+        - [ ] Separate components instantiating FileManager retrieve a shared object
+        - [ ] FileManager takes String/Filename and writes the string to the filename
   - Map
     - Files
       - Map.h
@@ -47,6 +39,7 @@ docker run -dt -v $(pwd)/src:/home/vscode -v $(pwd)/tests:/home/vscode/tests ubu
     - Files
       - Sort.h
       - Sort.cpp
+      - test_Sort.cpp
     - Dev: Alice
 
 ### Tasks
@@ -61,11 +54,6 @@ docker run -dt -v $(pwd)/src:/home/vscode -v $(pwd)/tests:/home/vscode/tests ubu
 
 ### Meeting Plans
 
-1. Now
-  - Get dev environment setup
-2. Next meeting
-  - Figure out what header files look like
-  - Break up implementation work & test cases
-    - Individual work
-3. Next
-  - Put it all together
+- [X] Got dev environments setup  
+- [X] Broke up implementation work & test cases  
+- [ ] Next: Put it all together
