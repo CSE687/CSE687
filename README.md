@@ -30,6 +30,7 @@ Winter 2023 class project
       - Map.h
       - Map.cpp
     - Dev: Joe
+      - Working on `main.cpp` to include original + Map test
   - Reduce
     - Files
       - Reduce.h
@@ -41,6 +42,10 @@ Winter 2023 class project
       - Sort.cpp
       - test_Sort.cpp
     - Dev: Alice
+  - Executive:
+    - Dev: Wes
+  - Workflow:
+    - Dev: Wes
 
 ### Tasks
 
@@ -54,6 +59,6 @@ Winter 2023 class project
 
 ### Meeting Plans
 
-- [X] Got dev environments setup  
-- [X] Broke up implementation work & test cases  
+- [X] Got dev environments setup
+- [X] Broke up implementation work & test cases
 - [ ] Next: Put it all together
