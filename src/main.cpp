@@ -1,5 +1,4 @@
-#include "FileManager/FileManager.hpp"
-
+#include "FileManager.hpp"
 #include <boost/log/trivial.hpp>
 
 #include "Reduce.h"
@@ -16,18 +15,28 @@ int main(int argc, char *argv[])
         help();
     }
     else {
-        FileManager filemanager(argv[1], argv[2], argv[3]);
+        FileManager* filemanager = FileManager::GetInstance(argv[1], argv[2], argv[3]);
 
-        if(filemanager.checkDirectoryExists(filemanager.getInputDirectory())) {
-            std::vector<std::string> input_files = filemanager.getDirectoryFileList(filemanager.getInputDirectory());
+        if(filemanager->checkDirectoryExists(filemanager->getInputDirectory())) {
+            std::vector<std::string> input_files = filemanager->getDirectoryFileList(filemanager->getInputDirectory());
             std::cout << "All Files in Input Directory:\n";
             for (std::string i: input_files) {
                 std::cout << "\t" << i << std::endl;
             }
             std::cout << std::endl << std::endl;
 
+            std::cout << "Reading first file in directory: " << input_files[2] << std::endl;
+            std::vector<std::string> file_lines = filemanager->readFile(input_files[2]);
+            for (std::string i: file_lines) {
+                std::cout << i << std::endl;
+            }
+            std::cout << std::endl << std::endl;
+
+            std::cout << "Copying file to write: " << input_files[2] << std::endl << std::endl;
+            filemanager->writeFile(filemanager->getOutputDirectory(), "file_copy.txt", file_lines);
+
         } else {
-            std::cout << "Directory " << filemanager.getInputDirectory() << " does not exist.\n\n";
+            std::cout << "Directory " << filemanager->getInputDirectory() << " does not exist.\n\n";
             help();
             std::cout << std::endl;
         }

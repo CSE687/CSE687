@@ -2,9 +2,13 @@
 #include <boost/filesystem.hpp>
 #include <vector>
 #include <iostream>
+#include <fstream>
 
 class FileManager {
-public:
+private:
+    static FileManager * instance;
+    static std::mutex mutex_;
+protected:
     std::string input_directory;
     std::string output_directory;
     std::string temp_directory;
@@ -13,12 +17,17 @@ public:
         output_directory = output;
         temp_directory = temp;
     }
+public:
+    FileManager(FileManager &other) = delete;
+    void operator=(const FileManager &) = delete;
+    static FileManager *GetInstance(const std::string& input, const std::string& output, const std::string& temp);
     std::string getInputDirectory();
     std::string getOutputDirectory();
     std::string getTempDirectory();
     void printDirectories();
-    void readFile(std::string directory);
-    void writeFile(std::string directory);
+    std::vector<std::string> readFile(std::string filepath);
+    void writeFile(std::string filepath, std::string filename, std::vector<std::string> file_lines);
     std::vector<std::string> getDirectoryFileList(std::string directory);
     bool checkDirectoryExists(std::string directory);
+    void createDirectory(std::string directory);
 };

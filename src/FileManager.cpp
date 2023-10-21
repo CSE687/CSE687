@@ -1,6 +1,17 @@
 
 #include "FileManager.hpp"
 
+FileManager* FileManager::instance{nullptr};
+std::mutex FileManager::mutex_;
+
+FileManager *FileManager::GetInstance(const std::string& input, const std::string& output, const std::string& temp) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (instance == nullptr) {
+        instance = new FileManager(input, output, temp);
+    }
+    return instance;
+}
+
 void FileManager::printDirectories() {
     std::cout << "Input Directory: " << input_directory << std::endl;
     std::cout << "Output Directory: " << output_directory << std::endl;
@@ -9,6 +20,10 @@ void FileManager::printDirectories() {
 
 bool FileManager::checkDirectoryExists(std::string directory) {
     return boost::filesystem::is_directory(directory);
+}
+
+void FileManager::createDirectory(std::string directory) {
+    boost::filesystem::create_directory(directory);
 }
 
 std::vector<std::string> FileManager::getDirectoryFileList(std::string directory) {
@@ -25,6 +40,33 @@ std::vector<std::string> FileManager::getDirectoryFileList(std::string directory
         }
     }
     return file_list;
+}
+
+std::vector<std::string> FileManager::readFile(std::string filepath) {
+    std::vector<std::string> file_lines;
+    std::ifstream read_file(filepath);
+    std::string line;
+    while (std::getline(read_file, line)) {
+        file_lines.insert(file_lines.end(), line);
+    }
+    return file_lines;
+}
+
+void FileManager::writeFile(std::string filepath, std::string filename, std::vector<std::string> file_lines) {
+    std::string allLines;
+    if (!checkDirectoryExists(filepath)) {
+        createDirectory(filepath);
+    }
+    std::string full_file_path = filepath + "/" + filename;
+    std::ofstream write_file(full_file_path);
+
+    if (write_file.is_open()) {
+        for (std::string i: file_lines) {
+            write_file << i << std::endl;
+        }
+    }
+    else { std::cerr << "Unable to open file\n"; }
+    write_file.close();
 }
 
 std::string FileManager::getInputDirectory() { return input_directory; }
