@@ -52,8 +52,6 @@ int main(int argc, char *argv[])
 
     // std::vector<int> values = {1, 2, 3};
     // std::string output_dir = "some/path/somewhere";
-    // Executive executer;
-    // executer.execute(argc, argv);
 
     // reduce.reduce("Hello", values);
 
