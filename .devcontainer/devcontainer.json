@@ -19,7 +19,24 @@
                         "path": "/bin/zsh"
                     }
                 },
-                "terminal.integrated.defaultProfile.linux": "zsh"
+                "terminal.integrated.defaultProfile.linux": "zsh",
+                // EDITOR
+                "editor.acceptSuggestionOnEnter": "off",
+                "editor.detectIndentation": false,
+                "editor.mouseWheelZoom": false,
+                "editor.renderLineHighlight": "none",
+                "editor.smoothScrolling": true,
+                "editor.formatOnSave": true,
+                "breadcrumbs.enabled": true,
+                // FILES
+                "files.eol": "\n",
+                "files.insertFinalNewline": true,
+                "files.trimFinalNewlines": true,
+                "files.trimTrailingWhitespace": true,
+                // CPP
+                "[cpp]": {
+                    "editor.defaultFormatter": "ms-vscode.cpptools"
+                }
             },
             "extensions": [
                 "ms-vscode.cpptools",
