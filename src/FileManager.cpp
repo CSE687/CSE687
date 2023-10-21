@@ -12,6 +12,14 @@ FileManager *FileManager::GetInstance(const std::string& input, const std::strin
     return instance;
 }
 
+FileManager *FileManager::GetInstance() {
+    if (instance == nullptr) {
+        std::cerr << "Unable to instantiate File Manager, need to input arguments.\n"; 
+    } else {
+        return instance;
+    }
+}
+
 void FileManager::printDirectories() {
     std::cout << "Input Directory: " << input_directory << std::endl;
     std::cout << "Output Directory: " << output_directory << std::endl;

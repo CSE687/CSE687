@@ -21,6 +21,7 @@ public:
     FileManager(FileManager &other) = delete;
     void operator=(const FileManager &) = delete;
     static FileManager *GetInstance(const std::string& input, const std::string& output, const std::string& temp);
+    static FileManager *GetInstance();
     std::string getInputDirectory();
     std::string getOutputDirectory();
     std::string getTempDirectory();
