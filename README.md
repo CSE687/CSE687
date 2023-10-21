@@ -2,7 +2,6 @@
 
 Winter 2023 class project
 
-
 ## Quickstart
 
 Of course, you can name things anything you want, but the following is an example.
@@ -52,9 +51,9 @@ docker run -dt -v $(pwd)/src:/home/vscode -v $(pwd)/tests:/home/vscode/tests ubu
 
 ### Tasks
 
-- [ ] Boost compiling on MacOS
+- [X] Boost compiling on MacOS
   - [X] `brew install boost`
-- [ ] Write a basic unit test with Boost
+- [X] Write a basic unit test with Boost
 - [X] Log with Boost
 - [ ] Basic file with text separated on rows
   - [ ] Read the text and count words
