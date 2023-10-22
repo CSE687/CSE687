@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE mytests
 #include <boost/test/included/unit_test.hpp>
-#include "../src/Map.h"
+#include "../src/Map.hpp"
 
 BOOST_AUTO_TEST_CASE(myTestCase){
     size_t bufSize = 1024;
