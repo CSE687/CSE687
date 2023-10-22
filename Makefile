@@ -25,7 +25,7 @@ build-debug:
 
 debug: build-debug
 	# Will need to run this outside of make
-	@ gdb ./bin/$N.out -ex run --args tests/workdir/input tests/workdir/output tests/workdir/temp
+	@ gdb --args bin/project-01.out tests/workdir/input tests/workdir/output tests/workdir/temp
 
 # Remove compiled binaries, output files, and temp files
 clean:
