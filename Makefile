@@ -5,20 +5,25 @@ all: build run
 build:
 	@ g++ src/*.cpp -o bin/$N.out \
 	-std=c++11 \
-	-DBOOST_LOG_DYN_LINK -lboost_log -lboost_log_setup -lboost_thread -lboost_system
-
-build-test:
-	@ g++ src/Map.cpp tests/testMap.cpp -o bin/test
-
-run-test: build-test
-	@ ./bin/test
+	-DBOOST_LOG_DYN_LINK -lboost_log -lboost_log_setup -lboost_thread -lboost_system -lboost_filesystem
 
 run: build
-	@ ./bin/$N.out "All'sWellThatEndsWell.txt" "OutputFile.txt"
+	@ ./bin/$N.out workdir/input workdir/output workdir/temp
 
-debug:
-	@ g++ *.cpp -o $N.out -ggdb
+build-test:
+	@ g++ src/Reduce.cpp tests/*.cpp -o bin/test
 
-archive:
-	zip $N.zip *.cpp *.h *.png Makefile
-	mv $N.zip ~/Downloads/
+run-test: build build-test
+	@ ./bin/test
+	@ ./bin/$N.out tests/workdir/input tests/workdir/output tests/workdir/temp
+
+# debug:
+# 	@ g++ *.cpp -o $N.out -ggdb
+
+# Remove compiled binaries, output files, and temp files
+clean:
+	@ find ./bin/ ! -name '.gitignore' -type f -exec rm -f {} +
+	@ find tests/workdir/output ! -name '.gitignore' -type f -exec rm -f {} +
+	@ find tests/workdir/temp ! -name '.gitignore' -type f -exec rm -f {} +
+	@ find workdir/output ! -name '.gitignore' -type f -exec rm -f {} +
+	@ find workdir/temp ! -name '.gitignore' -type f -exec rm -f {} +

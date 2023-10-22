@@ -10,15 +10,14 @@
     The reduce method itself should not directly deal with any File IO.
 */
 
+#include <algorithm>
 #include <string>
 #include <vector>
-#include <algorithm>
 
 #ifndef REDUCE_H
 #define REDUCE_H
-class Reduce
-{
-public:
+class Reduce {
+   public:
     Reduce(const std::string &output_dir) : _output_dir(output_dir) {}
 
     // Sum vector and write to disk
@@ -27,7 +26,7 @@ public:
     // Returns the sum of the supplied vector
     int _sum_iterator(const std::vector<int> &values);
 
-private:
+   private:
     void export_result(const std::string &key, int value);
 
     std::string _output_dir;

@@ -1,48 +1,48 @@
-#include <vector>
-#include <iostream>
-#include <fstream>
-#include <string>
-
 #include <boost/log/trivial.hpp>
 
-#include "Reduce.h"
-#include "Map.h"
+#include "FileManager.hpp"
+#include "Reduce.hpp"
 
-// Input Dir
-// Output Dir
-// Temp Dir
-int main(int argc, char *argv[])
-{
-    BOOST_LOG_TRIVIAL(trace) << "A trace severity message";
-    BOOST_LOG_TRIVIAL(debug) << "A debug severity message";
-    BOOST_LOG_TRIVIAL(info) << "An informational severity message";
-    BOOST_LOG_TRIVIAL(warning) << "A warning severity message";
-    BOOST_LOG_TRIVIAL(error) << "An error severity message";
-    BOOST_LOG_TRIVIAL(fatal) << "A fatal severity message";
+void help() {
+    std::cout << "INPUT ERROR: Your inputs for the program should be as follows: program.out <1> <2> <3>\n";
+    std::cout << "1 - Input Directory\n2 - Output Directory\n3 - Temp Directory for Intermediates\n";
+    std::cout << "Please try running again in the following format.\n";
+}
 
-    std::vector<int> values = {1, 2, 3};
-    std::string output_dir = "some/path/somewhere";
-    Reduce reduce = Reduce(output_dir);
-    reduce.reduce("Hello", values);
+int main(int argc, char* argv[]) {
+    if (argv[1] == "-h" || argc != 4) {
+        help();
+    } else {
+        FileManager* filemanager = FileManager::GetInstance(argv[1], argv[2], argv[3]);
 
-    // start of JC's main.cpp
-    std::ifstream inputFile(argv[1], std::ios::in);
+        if (filemanager->checkDirectoryExists(filemanager->getInputDirectory())) {
+            std::vector<std::string> input_files = filemanager->getDirectoryFileList(filemanager->getInputDirectory());
+            std::cout << "All Files in Input Directory:\n";
+            for (std::string i : input_files) {
+                std::cout << "\t" << i << std::endl;
+            }
+            std::cout << std::endl;
 
-    size_t bufSize = 1024;
-    Map myMap(argv[2], bufSize);
+            std::cout << "Reading first file in directory: " << input_files[0] << std::endl;
+            std::vector<std::string> file_lines = filemanager->readFile(input_files[0]);
+            for (std::string i : file_lines) {
+                std::cout << i << std::endl;
+            }
+            std::cout << std::endl;
 
-    if (inputFile.is_open()){
-        std::string line;
-        while(inputFile.good()){
-            getline(inputFile, line);
-            myMap.map(line);
+            std::cout << "Copying file to write: " << input_files[0] << std::endl;
+            filemanager->writeFile(filemanager->getOutputDirectory(), "file_copy.txt", file_lines);
+
+        } else {
+            std::cout << "Directory " << filemanager->getInputDirectory() << " does not exist.\n\n";
+            help();
+            std::cout << std::endl;
         }
-        inputFile.close();
     }
 
-    else{
-        std::cout << "Unable to open file.";
-    }
+    // std::vector<int> values = {1, 2, 3};
+    // std::string output_dir = "some/path/somewhere";
+    // reduce.reduce("Hello", values);
 
     return 0;
 }
