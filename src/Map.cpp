@@ -9,7 +9,7 @@
 #include <boost/tokenizer.hpp>
 #include <boost/algorithm/string.hpp>
 #include <vector>
-#include "Map.h"
+#include "Map.hpp"
 
 // Initialize member variables, reserve buffer space, and open the output file
 Map::Map(char* outFile, size_t bufSize){
