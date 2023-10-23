@@ -13,7 +13,7 @@ build:
 
 build-test:
 	@ g++ src/Reduce.cpp \
-	tests/test_Reduce.cpp \
+	tests/testReduce.cpp \
 	$(STD) $(BOOST) \
 	-o bin/test
 
