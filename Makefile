@@ -17,8 +17,14 @@ run-test: build build-test
 	@ ./bin/test
 	@ ./bin/$N.out tests/workdir/input tests/workdir/output tests/workdir/temp
 
-# debug:
-# 	@ g++ *.cpp -o $N.out -ggdb
+build-debug:
+	@ g++ src/*.cpp -o bin/$N.out \
+	-std=c++11 \
+	-DBOOST_LOG_DYN_LINK -lboost_log -lboost_log_setup -lboost_thread -lboost_system -lboost_filesystem \
+	-ggdb
+
+debug: build-debug
+	@ gdb --args bin/$N.out tests/workdir/input tests/workdir/output tests/workdir/temp
 
 # Remove compiled binaries, output files, and temp files
 clean:
