@@ -1,30 +1,33 @@
-N=project-01
+NAME=project-01
+
+STD=-std=c++11
+BOOST=-DBOOST_LOG_DYN_LINK -lboost_log -lboost_log_setup -lboost_thread -lboost_system -lboost_filesystem
+
+DEBUG_NAME=$(NAME)-debug
 
 all: build run
 
 build:
-	@ g++ src/*.cpp -o bin/$N.out \
-	-std=c++11 \
-	-DBOOST_LOG_DYN_LINK -lboost_log -lboost_log_setup -lboost_thread -lboost_system -lboost_filesystem
-
-run: build
-	@ ./bin/$N.out workdir/input workdir/output workdir/temp
+	@ g++ src/*.cpp -o bin/$(NAME) \
+	$(STD) $(BOOST)
 
 build-test:
-	@ g++ src/Reduce.cpp tests/*.cpp -o bin/test
-
-run-test: build build-test
-	@ ./bin/test
-	@ ./bin/$N.out tests/workdir/input tests/workdir/output tests/workdir/temp
+	@ g++ src/Reduce.cpp tests/*.cpp -o bin/test $(STD)
 
 build-debug:
-	@ g++ src/*.cpp -o bin/$N.out \
-	-std=c++11 \
-	-DBOOST_LOG_DYN_LINK -lboost_log -lboost_log_setup -lboost_thread -lboost_system -lboost_filesystem \
+	@ g++ src/*.cpp -o bin/$(DEBUG_NAME) \
+	$(STD) $(BOOST) \
 	-ggdb
 
+run: build
+	@ ./bin/$(NAME) workdir/input workdir/output workdir/temp
+
+test: build build-test
+	@ ./bin/test
+	@ ./bin/$(NAME) tests/workdir/input tests/workdir/output tests/workdir/temp
+
 debug: build-debug
-	@ gdb --args bin/$N.out tests/workdir/input tests/workdir/output tests/workdir/temp
+	@ gdb --args bin/$(DEBUG_NAME) tests/workdir/input tests/workdir/output tests/workdir/temp
 
 # Remove compiled binaries, output files, and temp files
 clean:
