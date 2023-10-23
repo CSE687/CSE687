@@ -78,6 +78,9 @@ void FileManager::writeFile(std::string filepath, std::string filename, std::vec
     write_file.close();
 }
 
+void FileManager::setInputDirectory(const std::string& directory) { this->input_directory = directory; }
+void FileManager::setOutputDirectory(const std::string& directory) { this->output_directory = directory; }
+void FileManager::setTempDirectory(const std::string& directory) { this->temp_directory = directory; }
 std::string FileManager::getInputDirectory() { return input_directory; }
 std::string FileManager::getOutputDirectory() { return output_directory; }
 std::string FileManager::getTempDirectory() { return temp_directory; }

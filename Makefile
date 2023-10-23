@@ -12,7 +12,10 @@ build:
 	$(STD) $(BOOST)
 
 build-test:
-	@ g++ src/Reduce.cpp tests/*.cpp -o bin/test $(STD)
+	@ g++ src/Reduce.cpp \
+	tests/test_Reduce.cpp \
+	$(STD) $(BOOST) \
+	-o bin/test
 
 build-debug:
 	@ g++ src/*.cpp -o bin/$(DEBUG_NAME) \

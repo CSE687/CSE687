@@ -2,6 +2,7 @@
 
 #include "FileManager.hpp"
 #include "Reduce.hpp"
+#include "Workflow.hpp"
 
 void help() {
     std::cout << "INPUT ERROR: Your inputs for the program should be as follows: program.out <1> <2> <3>\n";
@@ -13,26 +14,13 @@ int main(int argc, char* argv[]) {
     if (argv[1] == "-h" || argc != 4) {
         help();
     } else {
+        // Initialize File Manager
         FileManager* filemanager = FileManager::GetInstance(argv[1], argv[2], argv[3]);
 
         if (filemanager->checkDirectoryExists(filemanager->getInputDirectory())) {
-            std::vector<std::string> input_files = filemanager->getDirectoryFileList(filemanager->getInputDirectory());
-            std::cout << "All Files in Input Directory:\n";
-            for (std::string i : input_files) {
-                std::cout << "\t" << i << std::endl;
-            }
-            std::cout << std::endl;
-
-            std::cout << "Reading first file in directory: " << input_files[0] << std::endl;
-            std::vector<std::string> file_lines = filemanager->readFile(input_files[0]);
-            for (std::string i : file_lines) {
-                std::cout << i << std::endl;
-            }
-            std::cout << std::endl;
-
-            std::cout << "Copying file to write: " << input_files[0] << std::endl;
-            filemanager->writeFile(filemanager->getOutputDirectory(), "file_copy.txt", file_lines);
-
+            // Instantiate & Execute Workflow
+            Workflow workflow = Workflow(argv[1], argv[2], argv[3]);
+            workflow.execute();
         } else {
             std::cout << "Directory " << filemanager->getInputDirectory() << " does not exist.\n\n";
             help();
