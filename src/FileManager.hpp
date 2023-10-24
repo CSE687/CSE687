@@ -1,3 +1,5 @@
+#ifndef FILEMANAGER_H
+#define FILEMANAGER_H
 
 #include <boost/filesystem.hpp>
 #include <fstream>
@@ -24,6 +26,9 @@ class FileManager {
     void operator=(const FileManager &) = delete;
     static FileManager *GetInstance(const std::string &input, const std::string &output, const std::string &temp);
     static FileManager *GetInstance();
+    void setInputDirectory(const std::string &directory);
+    void setOutputDirectory(const std::string &directory);
+    void setTempDirectory(const std::string &directory);
     std::string getInputDirectory();
     std::string getOutputDirectory();
     std::string getTempDirectory();
@@ -34,3 +39,5 @@ class FileManager {
     bool checkDirectoryExists(std::string directory);
     void createDirectory(std::string directory);
 };
+
+#endif  // FILEMANAGER_H
