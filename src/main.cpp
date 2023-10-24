@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
         FileManager* filemanager = FileManager::GetInstance(argv[1], argv[2], argv[3]);
 
         if (filemanager->checkDirectoryExists(filemanager->getInputDirectory())) {
-            // Instantiate & Execute Workflow
+            // Initialize & Execute Workflow
             Workflow workflow = Workflow(argv[1], argv[2], argv[3]);
             workflow.execute();
         } else {
