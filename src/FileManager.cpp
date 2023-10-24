@@ -15,9 +15,8 @@ FileManager *FileManager::GetInstance(const std::string& input, const std::strin
 FileManager *FileManager::GetInstance() {
     if (instance == nullptr) {
         std::cerr << "Unable to instantiate File Manager, need to input arguments.\n"; 
-    } else {
-        return instance;
     }
+    return instance;
 }
 
 void FileManager::printDirectories() {
@@ -50,9 +49,20 @@ std::vector<std::string> FileManager::getDirectoryFileList(std::string directory
     return file_list;
 }
 
-std::vector<std::string> FileManager::readFile(std::string filepath) {
+std::vector<std::string> FileManager::readFile(std::string full_filepath) {
     std::vector<std::string> file_lines;
-    std::ifstream read_file(filepath);
+    std::ifstream read_file(full_filepath);
+    std::string line;
+    while (std::getline(read_file, line)) {
+        file_lines.insert(file_lines.end(), line);
+    }
+    return file_lines;
+}
+
+std::vector<std::string> FileManager::readFile(std::string filepath, std::string filename) {
+    std::string full_filepath = filepath + "/" + filename;
+    std::vector<std::string> file_lines;
+    std::ifstream read_file(full_filepath);
     std::string line;
     while (std::getline(read_file, line)) {
         file_lines.insert(file_lines.end(), line);
@@ -75,6 +85,15 @@ void FileManager::writeFile(std::string filepath, std::string filename, std::vec
     }
     else { std::cerr << "Unable to open file\n"; }
     write_file.close();
+}
+
+void FileManager::deleteFile(std::string filepath, std::string filename) {
+    std::string full_file_path = filepath + "/" + filename;
+    boost::filesystem::remove(full_file_path);
+}
+
+void FileManager::deleteAll(std::string full_filepath) {
+    boost::filesystem::remove_all(full_filepath);
 }
 
 std::string FileManager::getInputDirectory() { return input_directory; }

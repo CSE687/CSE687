@@ -35,6 +35,15 @@ int main(int argc, char *argv[])
             std::cout << "Copying file to write: " << input_files[2] << std::endl << std::endl;
             filemanager->writeFile(filemanager->getOutputDirectory(), "file_copy.txt", file_lines);
 
+
+            // filemanager->deleteFile(filemanager->getOutputDirectory(), "file_copy.txt");
+            filemanager->deleteAll(filemanager->getOutputDirectory());
+            try {
+                std::vector<std::string> file = filemanager->readFile(filemanager->getOutputDirectory(), "file_copy.txt");
+            } catch (...) {
+                std::cout << "Expected to not read file. Correct";
+            }
+
         } else {
             std::cout << "Directory " << filemanager->getInputDirectory() << " does not exist.\n\n";
             help();

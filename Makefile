@@ -8,7 +8,7 @@ build:
 	-DBOOST_LOG_DYN_LINK -lboost_log -lboost_log_setup -lboost_thread -lboost_system -lboost_filesystem
 
 build-test:
-	@ g++ src/Reduce.cpp tests/*.cpp -o bin/test
+	@ g++ src/*.cpp tests/*.cpp -o bin/test
 
 run-test: build-test
 	@ ./bin/test
