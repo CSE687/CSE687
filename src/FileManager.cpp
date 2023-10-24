@@ -71,7 +71,6 @@ std::vector<std::string> FileManager::readFile(std::string filepath, std::string
 }
 
 void FileManager::writeFile(std::string filepath, std::string filename, std::vector<std::string> file_lines) {
-    std::string allLines;
     // if the directory doesn't exist, we need to create the directory
     if (!checkDirectoryExists(filepath)) {
         createDirectory(filepath);
@@ -80,14 +79,28 @@ void FileManager::writeFile(std::string filepath, std::string filename, std::vec
     std::ofstream write_file(full_file_path); // create the output file object
 
     // open the file
-    if (write_file.is_open()) {
-        // write each line to the file
-        for (std::string i: file_lines) {
-            write_file << i << std::endl;
-        }
+    if (!write_file.is_open()) {
+        write_file.open(full_file_path, std::ofstream::out);
     }
-    // if the file can't be opened, return a cerr
-    else { std::cerr << "Unable to open file\n"; }
+    // write each line to the file
+    for (std::string i: file_lines) {
+        write_file << i << std::endl;
+    }
+    
+    write_file.close(); // close the file
+}
+
+// writes a file given filepath, filename, and a string to append to end of file
+void FileManager::appendToFile(std::string filepath, std::string filename, std::string file_line) {
+    // if the directory doesn't exist, we need to create the directory
+    if (!checkDirectoryExists(filepath)) {
+        createDirectory(filepath);
+    }
+    std::string full_file_path = filepath + "/" + filename;
+    std::fstream write_file; // create the output file object
+
+    write_file.open(full_file_path, std::ofstream::app); // open file in append mode
+    write_file << file_line << std::endl; // write line to file
     write_file.close(); // close the file
 }
 

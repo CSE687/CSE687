@@ -36,13 +36,16 @@ int main(int argc, char *argv[])
             filemanager->writeFile(filemanager->getOutputDirectory(), "file_copy.txt", file_lines);
 
 
-            // filemanager->deleteFile(filemanager->getOutputDirectory(), "file_copy.txt");
-            filemanager->deleteAll(filemanager->getOutputDirectory());
-            try {
-                std::vector<std::string> file = filemanager->readFile(filemanager->getOutputDirectory(), "file_copy.txt");
-            } catch (...) {
-                std::cout << "Expected to not read file. Correct";
+            std::cout << "Creating new file to test one line append...\n";
+            filemanager->appendToFile(filemanager->getOutputDirectory(), "test.txt", "Test1");
+            filemanager->appendToFile(filemanager->getOutputDirectory(), "test.txt", "Append new line");
+            std::cout << "Reading appended file:\n";
+            std::vector<std::string> file = filemanager->readFile(filemanager->getOutputDirectory(), "test.txt");
+            for (std::string i: file) {
+                std::cout << i << std::endl;
             }
+            std::cout << std::endl;
+            filemanager->deleteAll(filemanager->getOutputDirectory());
 
         } else {
             std::cout << "Directory " << filemanager->getInputDirectory() << " does not exist.\n\n";

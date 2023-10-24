@@ -30,6 +30,7 @@ public:
     std::vector<std::string> readFile(std::string full_filepath); // reads a file given the full filepath
     std::vector<std::string> readFile(std::string filepath, std::string filename); // reads a file given the filepath and filename separately
     void writeFile(std::string filepath, std::string filename, std::vector<std::string> file_lines); // writes a file given filepath, filename, and lines in a vector
+    void appendToFile(std::string filepath, std::string filename, std::string file_line); // writes a file given filepath, filename, and a string to append to end of file
     void deleteAll(std::string full_filepath); // deletes a directory or file give full path
     void deleteFile(std::string filepath, std::string filename); // deletes a file
     std::string getInputDirectory(); // gets the input directory as specified by program and saved to class instance
