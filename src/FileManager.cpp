@@ -17,9 +17,8 @@ FileManager* FileManager::GetInstance(const std::string& input, const std::strin
 FileManager* FileManager::GetInstance() {
     if (instance == nullptr) {
         std::cerr << "Unable to instantiate File Manager, need to input arguments.\n";
-    } else {
-        return instance;
     }
+    return instance;
 }
 
 // prints the input, output, and temporary directories for the class
