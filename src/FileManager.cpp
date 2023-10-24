@@ -61,13 +61,7 @@ std::vector<std::string> FileManager::readFile(std::string full_filepath) {
 
 std::vector<std::string> FileManager::readFile(std::string filepath, std::string filename) {
     std::string full_filepath = filepath + "/" + filename;
-    std::vector<std::string> file_lines;
-    std::ifstream read_file(full_filepath);
-    std::string line;
-    while (std::getline(read_file, line)) {
-        file_lines.insert(file_lines.end(), line);
-    }
-    return file_lines;
+    return readFile(full_filepath);
 }
 
 void FileManager::writeFile(std::string filepath, std::string filename, std::vector<std::string> file_lines) {
