@@ -1,3 +1,14 @@
+/////////////////////////////////////////////////////////////////////
+//  FileManager.hpp    -   header file for FileManager class       //
+//  Language           -   C++                                     //
+//  Author             -   Chandler Johns                          //
+/////////////////////////////////////////////////////////////////////
+
+
+/*
+The FileManager class contains all the functionality to read and write files.
+This class is created as a singleton so that every class can use the same instance of FileManager.
+*/
 
 #include <boost/filesystem.hpp>
 #include <vector>
