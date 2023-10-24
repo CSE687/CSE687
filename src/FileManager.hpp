@@ -9,11 +9,13 @@
 The FileManager class contains all the functionality to read and write files.
 This class is created as a singleton so that every class can use the same instance of FileManager.
 */
+#ifndef FILEMANAGER_H
+#define FILEMANAGER_H
 
 #include <boost/filesystem.hpp>
-#include <vector>
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <vector>
 
 class FileManager {
 private:
@@ -47,4 +49,9 @@ public:
     std::string getInputDirectory(); // gets the input directory as specified by program and saved to class instance
     std::string getOutputDirectory(); // gets the output directory as specified by program and saved to class instance
     std::string getTempDirectory();  // gets the temporary directory as specified by program and saved to class instance
+    void setInputDirectory(const std::string &directory);
+    void setOutputDirectory(const std::string &directory);
+    void setTempDirectory(const std::string &directory);
 };
+
+#endif  // FILEMANAGER_H

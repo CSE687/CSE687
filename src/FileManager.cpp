@@ -6,7 +6,7 @@ std::mutex FileManager::mutex_; // mutex to keep class between multiple threads
 
 // constructor based on argument input, creates the file manager class instance
 // if the instance is already instantiated, it returns the instance
-FileManager *FileManager::GetInstance(const std::string& input, const std::string& output, const std::string& temp) {
+FileManager* FileManager::GetInstance(const std::string& input, const std::string& output, const std::string& temp) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (instance == nullptr) {
         instance = new FileManager(input, output, temp);
@@ -14,12 +14,12 @@ FileManager *FileManager::GetInstance(const std::string& input, const std::strin
     return instance;
 }
 
-// constructor to get an already created file manager instance that already exists, no constructor parameters necessary
-FileManager *FileManager::GetInstance() {
+FileManager* FileManager::GetInstance() {
     if (instance == nullptr) {
-        std::cerr << "Unable to instantiate File Manager, need to input arguments.\n"; 
+        std::cerr << "Unable to instantiate File Manager, need to input arguments.\n";
+    } else {
+        return instance;
     }
-    return instance;
 }
 
 // prints the input, output, and temporary directories for the class
@@ -113,6 +113,9 @@ void FileManager::deleteAll(std::string full_filepath) {
     boost::filesystem::remove_all(full_filepath);
 }
 
+void FileManager::setInputDirectory(const std::string& directory) { this->input_directory = directory; }
+void FileManager::setOutputDirectory(const std::string& directory) { this->output_directory = directory; }
+void FileManager::setTempDirectory(const std::string& directory) { this->temp_directory = directory; }
 std::string FileManager::getInputDirectory() { return input_directory; }
 std::string FileManager::getOutputDirectory() { return output_directory; }
 std::string FileManager::getTempDirectory() { return temp_directory; }

@@ -1,24 +1,41 @@
-N=project-01
+NAME=project-01
+
+STD=-std=c++11
+BOOST=-DBOOST_LOG_DYN_LINK -lboost_log -lboost_log_setup -lboost_thread -lboost_system -lboost_filesystem
+
+DEBUG_NAME=$(NAME)-debug
 
 all: build run
 
 build:
-	@ g++ src/*.cpp -o bin/$N.out \
-	-std=c++11 \
-	-DBOOST_LOG_DYN_LINK -lboost_log -lboost_log_setup -lboost_thread -lboost_system -lboost_filesystem
+	@ g++ src/*.cpp -o bin/$(NAME) \
+	$(STD) $(BOOST)
 
 build-test:
-	@ g++ src/*.cpp tests/*.cpp -o bin/test
+	@ g++ src/Reduce.cpp \
+	tests/testReduce.cpp \
+	$(STD) $(BOOST) \
+	-o bin/test
 
-run-test: build-test
-	@ ./bin/test
+build-debug:
+	@ g++ src/*.cpp -o bin/$(DEBUG_NAME) \
+	$(STD) $(BOOST) \
+	-ggdb
 
 run: build
-	@ ./bin/$N.out
+	@ ./bin/$(NAME) workdir/input workdir/output workdir/temp
 
-debug:
-	@ g++ *.cpp -o $N.out -ggdb
+test: build build-test
+	@ ./bin/test
+	@ ./bin/$(NAME) tests/workdir/input tests/workdir/output tests/workdir/temp
 
-archive:
-	zip $N.zip *.cpp *.h *.png Makefile
-	mv $N.zip ~/Downloads/
+debug: build-debug
+	@ gdb --args bin/$(DEBUG_NAME) tests/workdir/input tests/workdir/output tests/workdir/temp
+
+# Remove compiled binaries, output files, and temp files
+clean:
+	@ find ./bin/ ! -name '.gitignore' -type f -exec rm -f {} +
+	@ find tests/workdir/output ! -name '.gitignore' -type f -exec rm -f {} +
+	@ find tests/workdir/temp ! -name '.gitignore' -type f -exec rm -f {} +
+	@ find workdir/output ! -name '.gitignore' -type f -exec rm -f {} +
+	@ find workdir/temp ! -name '.gitignore' -type f -exec rm -f {} +

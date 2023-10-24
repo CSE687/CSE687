@@ -59,6 +59,6 @@ Winter 2023 class project
 
 ### Meeting Plans
 
-- [X] Got dev environments setup
+- [X] Get dev environments setup
 - [X] Broke up implementation work & test cases
 - [ ] Next: Put it all together
