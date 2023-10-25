@@ -47,7 +47,7 @@ void Workflow::execute() {
     std::vector<std::string> input_files = this->fileManager->getDirectoryFileList(this->fileManager->getInputDirectory());
 
     // Execute Map class
-    size_t bufSize = 512; 
+    size_t bufSize = 1024; 
     for (int i = 0; i < input_files.size(); i++){
         std::vector<std::string> file_lines = this->fileManager->readFile(input_files[i]);
         size_t numLines = file_lines.size();
