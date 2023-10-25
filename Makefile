@@ -11,12 +11,39 @@ build:
 	@ g++ src/*.cpp -o bin/$(NAME) \
 	$(STD) $(BOOST)
 
-build-test:
+## CLASS REDUCE
+build-reduce:
+	@ g++ src/Reduce.cpp \
+	tests/testReduce.cpp \
+	$(STD) $(BOOST) \
+	-o bin/testReduce
+
+test-reduce: build-reduce
+	@echo "\n*** TESTING REDUCE CLASS ***"
+	@ ./bin/testReduce
+
+## CLASS MAP
+build-map:
 	@ g++ src/Map.cpp \
 	src/FileManager.cpp \
 	tests/testMap.cpp \
 	$(STD) $(BOOST) \
-	-o bin/test
+	-o bin/testMap
+
+test-map: build-map
+	@echo "\n*** TESTING MAP CLASS ***"
+	@ ./bin/testMap
+
+## CLASS FILEMANAGER
+build-filmgr:
+	@ g++ src/FileManager.cpp \
+	tests/testFileManager.cpp \
+	$(STD) $(BOOST) \
+	-o bin/testFileManager
+
+test-filmgr: build-filmgr
+	@echo "\n*** TESTING FILE MANAGER CLASS ***"
+	@ ./bin/testFileManager
 
 build-debug:
 	@ g++ src/*.cpp -o bin/$(DEBUG_NAME) \
@@ -26,8 +53,8 @@ build-debug:
 run: build
 	@ ./bin/$(NAME) workdir/input workdir/output workdir/temp
 
-test: build build-test
-	@ ./bin/test
+# run all unit tests
+test: test-map test-reduce test-filmgr
 
 debug: build-debug
 	@ gdb --args bin/$(DEBUG_NAME) tests/workdir/input tests/workdir/output tests/workdir/temp
