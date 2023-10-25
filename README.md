@@ -23,8 +23,8 @@ Winter 2023 class project
       - FileManager.cpp
     - Dev: Chandler
       - Looking into a Singleton pattern for FileManager
-        - [ ] Separate components instantiating FileManager retrieve a shared object
-        - [ ] FileManager takes String/Filename and writes the string to the filename
+        - [X] Separate components instantiating FileManager retrieve a shared object
+        - [X] FileManager takes String/Filename and writes the string to the filename
   - Map
     - Files
       - Map.h
