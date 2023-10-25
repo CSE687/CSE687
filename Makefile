@@ -12,8 +12,9 @@ build:
 	$(STD) $(BOOST)
 
 build-test:
-	@ g++ src/Reduce.cpp \
-	tests/testReduce.cpp \
+	@ g++ src/Map.cpp \
+	src/FileManager.cpp \
+	tests/testMap.cpp \
 	$(STD) $(BOOST) \
 	-o bin/test
 

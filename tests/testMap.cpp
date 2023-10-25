@@ -1,12 +1,13 @@
-#define BOOST_TEST_MODULE mytests
+#define BOOST_TEST_MODULE TestMap
 #include <boost/test/included/unit_test.hpp>
 #include "../src/Map.hpp"
 
-BOOST_AUTO_TEST_CASE(myTestCase){
+FileManager* fileManager = FileManager::GetInstance("/workspaces/CSE687_Project/tests/workdir/input", "/workspaces/CSE687_Project/tests/workdir/output", "/workspaces/CSE687_Project/tests/workdir/temp");
+
+BOOST_AUTO_TEST_CASE(TestMap_tokenize){
     size_t bufSize = 1024;
-    char argv[] = {'O', 'u', 't', 'p', 'u', 't', '.', 't', 'x', 't', 0};
-    char* outputFile = argv;
-    Map myMap(outputFile, bufSize);
+    size_t numLines = 1;
+    Map myMap = Map(bufSize, numLines);
 
     std::vector<std::string> token;
     token.push_back("this");
