@@ -12,18 +12,21 @@
 #include "Map.hpp"
 
 // Initialize member variables, reserve buffer space, and open the output file
-Map::Map(char* outFile, size_t bufSize){
+Map::Map(std::string inputDir, std::string outputDir, std::string tempDir, size_t bufSize, size_t lineCount){
+    // Initialize FileManager
+    this->fileManager = FileManager::GetInstance(inputDir, outputDir, tempDir);
+
     bufferSize = bufSize;
     buffer.reserve(bufferSize);
-    outFilename = outFile;
-    outputFile.open(outFilename);
+    numLines = lineCount;
 }
 
 // Tokenize the line from the input file and write each tokenized word to disk
-void Map::map(std::string value){
+void Map::map(std::string inputFile, std::string value, size_t currLine){
+    tempFilename = inputFile;
     std::vector<std::string> words = tokenize(value);
     for (std::string word : words){
-        exportData(word);
+        exportData(word, currLine);
     }
 }
 
@@ -64,17 +67,14 @@ std::vector<std::string> Map::tokenize(std::string line){
 }
 
 // Buffer output in memory and write to disk when buffer is full
-void Map::exportData(std::string word){
-    buffer += "(" + word + ", 1)\n";
-    if (buffer.size() >= bufferSize){
-        outputFile << buffer;
+void Map::exportData(std::string word, size_t currLine){
+    buffer.push_back("(" + word + ", 1)");
+    if ((buffer.size() >= bufferSize) || (currLine == numLines - 1)){
+        std::string tempFile = tempFilename.substr(14, tempFilename.size() - 18) + "Output.txt";
+        this->fileManager->writeFile(this->fileManager->getTempDirectory(), tempFile, buffer);
         buffer.clear();
     }
 }
 
-// Write to disk a final time, flush the buffer, and close the file
-Map::~Map(){
-    outputFile << buffer;
-    buffer.clear();
-    outputFile.close();
-}
+// Destructor
+Map::~Map(){}

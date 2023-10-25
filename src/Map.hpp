@@ -18,30 +18,32 @@ buffer is full.
 #include <string>
 #include <vector>
 #include <fstream>
+#include "FileManager.hpp"
 
 class Map{
     public:
 
     // class constructor
-    Map(char*, size_t);
+    Map(std::string, std::string, std::string, size_t, size_t);
     
     // tokenize string and write to disk
-    void map(std::string);
+    void map(std::string, std::string, size_t);
 
     // returns a vector of strings, with each element being a new word
     std::vector<std::string> tokenize(std::string);
 
     // buffers memory and writes to disk when buffer is full
-    void exportData(std::string);
+    void exportData(std::string, size_t);
 
     // class destructor
     ~Map();
 
     private:
+    FileManager* fileManager;
+    std::string tempFilename;
     size_t bufferSize;
-    std::string buffer;
-    char* outFilename;
-    std::ofstream outputFile;
+    std::vector<std::string> buffer;
+    size_t numLines;
     
     
     

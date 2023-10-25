@@ -66,7 +66,7 @@ void FileManager::writeFile(std::string filepath, std::string filename, std::vec
         createDirectory(filepath);
     }
     std::string full_file_path = filepath + "/" + filename;
-    std::ofstream write_file(full_file_path);
+    std::ofstream write_file(full_file_path, std::ios::app);
 
     if (write_file.is_open()) {
         for (std::string i : file_lines) {

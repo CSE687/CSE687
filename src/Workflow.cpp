@@ -3,7 +3,7 @@
 #include <string>
 
 #include "FileManager.hpp"
-// #include "Map.hpp"
+#include "Map.hpp"
 #include "Reduce.hpp"
 // #include "Sort.hpp"
 
@@ -45,23 +45,18 @@ void Workflow::setOutputDir(std::string outputDir) {
 
 void Workflow::execute() {
     std::vector<std::string> input_files = this->fileManager->getDirectoryFileList(this->fileManager->getInputDirectory());
-    std::cout << "All Files in Input Directory:\n";
-    for (std::string i : input_files) {
-        std::cout << "\t" << i << std::endl;
-    }
-    std::cout << std::endl;
-
-    std::cout << "Reading first file in directory: " << input_files[0] << std::endl;
-    std::vector<std::string> file_lines = this->fileManager->readFile(input_files[0]);
-    for (std::string i : file_lines) {
-        std::cout << i << std::endl;
-    }
-    std::cout << std::endl;
-
-    std::cout << "Copying file to write: " << input_files[0] << std::endl;
-    this->fileManager->writeFile(this->fileManager->getOutputDirectory(), "file_copy.txt", file_lines);
 
     // Execute Map class
+    size_t bufSize = 512; 
+    for (int i = 0; i < input_files.size(); i++){
+        std::vector<std::string> file_lines = this->fileManager->readFile(input_files[i]);
+        size_t numLines = file_lines.size();
+        Map myMap = Map(this->fileManager->getInputDirectory(), this->fileManager->getOutputDirectory(), this->fileManager->getTempDirectory(), bufSize, numLines);
+        for (size_t j = 0; j < numLines; j++){
+            myMap.map(input_files[i], file_lines[j], j);
+        }
+    }
+
     // Execute Sorting class
     // Execute Reduce class
 }
