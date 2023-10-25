@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-//  Map.h       -   header file for Map class               //
+//  Map.cpp     -   implementation file for Map class       //
 //  Language    -   C++                                     //
 //  Author      -   Joe Cranston                            //
 //////////////////////////////////////////////////////////////
@@ -11,11 +11,9 @@
 #include <vector>
 #include "Map.hpp"
 
-// Initialize member variables, reserve buffer space, and open the output file
-Map::Map(std::string inputDir, std::string outputDir, std::string tempDir, size_t bufSize, size_t lineCount){
-    // Initialize FileManager
-    this->fileManager = FileManager::GetInstance(inputDir, outputDir, tempDir);
-
+// Initialize FileManager instance and reserve buffer space
+Map::Map(size_t bufSize, size_t lineCount){
+    this->fileManager = FileManager::GetInstance();
     bufferSize = bufSize;
     buffer.reserve(bufferSize);
     numLines = lineCount;
@@ -52,7 +50,7 @@ std::vector<std::string> Map::tokenize(std::string line){
         return word.empty();
     }), words.end());
 
-    // FOr each word, remove punctuation and capitalization
+    // For each word, remove punctuation and capitalization
     for (std::string& word : words){
         std::string result = "";
         for (char c : word){
@@ -66,15 +64,12 @@ std::vector<std::string> Map::tokenize(std::string line){
     return words;
 }
 
-// Buffer output in memory and write to disk when buffer is full
+// Buffer output in memory and write to disk when buffer is full or last line of input file is reached
 void Map::exportData(std::string word, size_t currLine){
-    buffer.push_back("(" + word + ", 1)");
+    buffer += "(" + word + ", 1)\n";
     if ((buffer.size() >= bufferSize) || (currLine == numLines - 1)){
         std::string tempFile = tempFilename.substr(14, tempFilename.size() - 18) + "Output.txt";
-        this->fileManager->writeFile(this->fileManager->getTempDirectory(), tempFile, buffer);
+        this->fileManager->appendToFile(this->fileManager->getTempDirectory(), tempFile, buffer);
         buffer.clear();
     }
 }
-
-// Destructor
-Map::~Map(){}
