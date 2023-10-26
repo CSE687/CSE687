@@ -28,7 +28,6 @@ run: build
 
 test: build build-test
 	@ ./bin/test
-	@ ./bin/$(NAME) tests/workdir/input tests/workdir/output tests/workdir/temp
 
 debug: build-debug
 	@ gdb --args bin/$(DEBUG_NAME) tests/workdir/input tests/workdir/output tests/workdir/temp

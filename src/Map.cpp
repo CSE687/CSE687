@@ -9,19 +9,20 @@
 #include <boost/tokenizer.hpp>
 #include <boost/algorithm/string.hpp>
 #include <vector>
+#include <boost/filesystem.hpp>
 #include "Map.hpp"
 
 // Initialize FileManager instance and reserve buffer space
-Map::Map(size_t bufSize, size_t lineCount){
+Map::Map(std::string inputFile, size_t bufSize, size_t lineCount){
     this->fileManager = FileManager::GetInstance();
+    tempFilename = inputFile;
     bufferSize = bufSize;
     buffer.reserve(bufferSize);
     numLines = lineCount;
 }
 
 // Tokenize the line from the input file and write each tokenized word to disk
-void Map::map(std::string inputFile, std::string value, size_t currLine){
-    tempFilename = inputFile;
+void Map::map(std::string value, size_t currLine){
     std::vector<std::string> words = tokenize(value);
     for (std::string word : words){
         exportData(word, currLine);
@@ -30,10 +31,11 @@ void Map::map(std::string inputFile, std::string value, size_t currLine){
 
 // Create a vector of strings, with each element being a new word
 std::vector<std::string> Map::tokenize(std::string line){
-    std::vector<std::string> words;
 
     // Treat doubles dashes as spaces
     boost::algorithm::replace_all(line, "--", " ");
+    std::vector<std::string> words;
+    std::string thisWord;
 
     // Remove any invalid ASCII values
     for (int strInd = 0; strInd < line.length(); strInd++){
@@ -42,25 +44,33 @@ std::vector<std::string> Map::tokenize(std::string line){
         }
     }
 
-    // Split each word in the input line whenever a space or tab is reached
-    boost::split(words, line, boost::is_any_of(" \t"));
+    // For each character in the line
+    for (char c : line){
+        // If it's a valid ASCII letter, lowercase it and add it to a temp word
+        if (isalpha(c)){
+            thisWord += tolower(c);
+        }
+        // If punctuation, ignore
+        else if (ispunct(c)){
+            continue;
+        }
+        // Append temp word containing only lowercase letters to vector of words
+        else{
+            words.push_back(thisWord);
+            thisWord.clear();
+        }
+    }
+
+    // Append word to vector a final time if not empty
+    if (thisWord != ""){
+        words.push_back(thisWord);
+    }
 
     // Remove any empty lines of data from the vector
     words.erase(std::remove_if(words.begin(), words.end(), [](const std::string& word) {
         return word.empty();
     }), words.end());
 
-    // For each word, remove punctuation and capitalization
-    for (std::string& word : words){
-        std::string result = "";
-        for (char c : word){
-            if (!std::ispunct(c)) {
-                result += c;
-            }
-        }
-        word = result;
-        boost::to_lower(word);
-    }
     return words;
 }
 
@@ -68,8 +78,8 @@ std::vector<std::string> Map::tokenize(std::string line){
 void Map::exportData(std::string word, size_t currLine){
     buffer += "(" + word + ", 1)\n";
     if ((buffer.size() >= bufferSize) || (currLine == numLines - 1)){
-        std::string tempFile = tempFilename.substr(14, tempFilename.size() - 18) + "Output.txt";
-        this->fileManager->appendToFile(this->fileManager->getTempDirectory(), tempFile, buffer);
+        std::string tmpFile = boost::filesystem::path(tempFilename).stem().string() + "Output.txt";
+        this->fileManager->appendToFile(this->fileManager->getTempDirectory(), tmpFile, buffer);
         buffer.clear();
     }
 }

@@ -5,10 +5,6 @@
 FileManager* fileManager = FileManager::GetInstance("/workspaces/CSE687_Project/tests/workdir/input", "/workspaces/CSE687_Project/tests/workdir/output", "/workspaces/CSE687_Project/tests/workdir/temp");
 
 BOOST_AUTO_TEST_CASE(TestMap_tokenize){
-    size_t bufSize = 1024;
-    size_t numLines = 1;
-    Map myMap = Map(bufSize, numLines);
-
     std::vector<std::string> token;
     token.push_back("this");
     token.push_back("is");
@@ -20,6 +16,30 @@ BOOST_AUTO_TEST_CASE(TestMap_tokenize){
     token.push_back("working");
     token.push_back("okay");
 
-    BOOST_TEST(token == myMap.tokenize("This is a test -- is the code wor-king okay?"));
+    BOOST_TEST(token == Map::tokenize("This is a test -- is the code wor-king okay?"));
+    BOOST_TEST(true);
+}
+
+BOOST_AUTO_TEST_CASE(TestMap_map){
+
+    size_t bufSize = 1024;
+    size_t lineCount = 2;
+    size_t currLine = 1;
+    std::string inputFile = "tests/workdir/input/testMap.txt";
+
+    Map myMap = Map(inputFile, bufSize, lineCount);
+
+    std::vector<std::string> fileLines;
+    std::string testLine = "Hello Map Class!";
+    fileLines.push_back(testLine);
+    fileManager->writeFile(fileManager->getInputDirectory(), "testMap.txt", fileLines);
+
+    myMap.map(testLine, currLine);
+
+    std::vector<std::string> read_lines = fileManager->readFile(fileManager->getTempDirectory(), "testMapOutput.txt");
+
+    BOOST_TEST(read_lines[0] == "(hello, 1)");
+    BOOST_TEST(read_lines[1] == "(map, 1)");
+    BOOST_TEST(read_lines[2] == "(class, 1)");
     BOOST_TEST(true);
 }

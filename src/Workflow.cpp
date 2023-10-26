@@ -51,9 +51,9 @@ void Workflow::execute() {
     for (int i = 0; i < input_files.size(); i++){
         std::vector<std::string> file_lines = this->fileManager->readFile(input_files[i]);
         size_t numLines = file_lines.size();
-        Map myMap = Map(bufSize, numLines);
+        Map myMap = Map(input_files[i], bufSize, numLines);
         for (size_t j = 0; j < numLines; j++){
-            myMap.map(input_files[i], file_lines[j], j);
+            myMap.map(file_lines[j], j);
         }
     }
 

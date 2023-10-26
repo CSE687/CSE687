@@ -23,13 +23,13 @@ class Map{
     public:
 
     // class constructor
-    Map(size_t, size_t);
+    Map(std::string, size_t, size_t);
     
     // tokenize string and write to disk
-    void map(std::string, std::string, size_t);
+    void map(std::string, size_t);
 
     // returns a vector of strings, with each element being a new word
-    std::vector<std::string> tokenize(std::string);
+    static std::vector<std::string> tokenize(std::string);
 
     // buffers memory and writes to disk when buffer is full
     void exportData(std::string, size_t);
