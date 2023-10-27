@@ -2,7 +2,7 @@
 #include <boost/test/included/unit_test.hpp>
 #include "../src/Map.hpp"
 
-FileManager* fileManager = FileManager::GetInstance("/workspaces/CSE687_Project/tests/workdir/input", "/workspaces/CSE687_Project/tests/workdir/output", "/workspaces/CSE687_Project/tests/workdir/temp");
+FileManager* fileManager = FileManager::GetInstance("workdir/input", "workdir/output", "workdir/temp");
 
 BOOST_AUTO_TEST_CASE(TestMap_tokenize){
     std::vector<std::string> token;
