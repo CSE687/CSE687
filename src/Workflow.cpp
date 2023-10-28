@@ -12,9 +12,9 @@
 using namespace std;
 
 #ifdef DEBUG
-#define DEBUG_MSG(str)       \
-    do {                     \
-        cout << str << endl; \
+#define DEBUG_MSG(str)                    \
+    do {                                  \
+        cout << "DEBUG: " << str << endl; \
     } while (false)
 #else
 #define DEBUG_MSG(str) void() 0  // treat DEBUG_MSG as a no-op if not in DEBUG mode
@@ -36,9 +36,9 @@ void Workflow::execute() {
     }
     DEBUG_MSG(debugmsg);
 #endif
-
     // Maps all the files:
-    Map mapper;  // unimplemented; set temp dir.
+    cout << "[+] Starting Mapper to parse input files..." << endl;
+    Map mapper;
     for (string currfile : input_files) {
         vector<string> contents;
         try {
@@ -62,58 +62,42 @@ void Workflow::execute() {
         DEBUG_MSG("Mapper tokenized " + to_string(wordcount) + " words from " + currfile);
 #endif
     }
-    cout << "Mapper completed intermediate files." << endl;
-}
-// Sorts into a multimap:
-// vector<string> tempFiles = fileManager->getDirectoryFileList(fileManager->getTempDirectory());
-// Reduce reducer = Reduce(fileManager->getOutputDirectory());  // maybe this shuold go in the above for-loop?
-// for (string currfile : tempFiles) {
-//    vector<string> contents;
-//    try {
-//        contents = fileManager->readFile(currfile);
-//    } catch (exception& e) {
-//        cerr << "Exception while reading map " << currfile << ": " << e.what() << endl;
-//        continue;
-//    }
-//    vector<WordToken> tokens;
-//    sortme(contents, &tokens);
-//}  // tokens is aggregated and sorted; sending to Reduce item by item.
+    cout << "[+] Mapper complete." << endl;
+    cout << "[+] Sorting and aggregating tokens in intermediate files..." << endl;
 
-// for (WordToken i : tokens) {
-// }
-//}
-
-/*
- * This helper function reads in a vector of strings that look like:
- *  ("a", 1); --> ("a", {1, 1, 1, 1, 1})
- *  ("the", 1)
- *  ("is", 1)
- *  ("the", 1)
- *  ("that", 1)
- *  ("ish", 1)
- * ...and sorts and aggregates their counts. The resulting vector gets passed to Reducer.
-
-
-
-void sortme(vector<string> lines, vector<WordToken>* tokens) {
-    // grab data from each line
-    // create WordToken, append to tokens vector
-    // sort vector by length of counts
-    smatch m;
-    regex regexp("^\\(\"([a-z]+)\", (\\d+)\\)$");
-
-    for (string i : lines) {
-        regex_search(i, m, regexp);
-        if (m.size() < 2) {
-            cerr << "NOMATCH Line: " << i << endl;
-        } else {
-            auto f = map->find(m[1]);
-            if (f != map->end()) {
-                f->second.push_back(m[2]);
+    input_files = this->fileManager->getDirectoryFileList(this->fileManager->getTempDirectory());
+    for (int i = 0; i < input_files.size(); i++) {
+#ifdef DEBUG
+        DEBUG_MSG("Processing input file " + input_files[i]);
+#endif
+        map<string, vector<int> > sorted_words;
+        vector<string> file_lines = this->fileManager->readFile(input_files[i]);
+        for (string j : file_lines) {
+            regex key_rgx("^\\(([a-z]+),");
+            regex value_rgx(", (\\d+)\\)");
+            smatch key, value_match;
+            regex_search(j, key, key_rgx);
+            regex_search(j, value_match, value_rgx);
+            if (key.size() < 2 || value_match.size() < 2) {
+                cout << "SKIP: No matches found in " << j << endl;
+                continue;
+            }
+            int value = stoi(value_match.str(1));
+            map<std::string, std::vector<int> >::iterator find_iter = sorted_words.find(key.str(1));
+            if (find_iter == sorted_words.end()) {
+                sorted_words.insert({key.str(1), {value}});
             } else {
-                map->insert();
+                vector<int> value_vector = find_iter->second;
+                value_vector.insert(value_vector.end(), value);
+                find_iter->second = value_vector;
             }
         }
+#ifdef DEBUG
+        DEBUG_MSG("File " + input_files[i] + " complete. (" + to_string(i + 1) + "/" + to_string(input_files.size()) + ")");
+#endif
     }
+    cout << "[+] Completed sorting and aggregating tokens." << endl;
+    cout << "[+] Reducing..." << endl;
+
+    // Wes's code goes here.
 }
-*/

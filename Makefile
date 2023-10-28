@@ -8,6 +8,10 @@ DEBUG_NAME=$(NAME)-debug
 all: build run
 
 build:
+	@ g++ src/*.cpp -o bin/$(NAME) \
+	$(STD) $(BOOST)
+
+build-dflag:
 	@ g++ src/*.cpp -DDEBUG -o bin/$(NAME) \
 	$(STD) $(BOOST)
 
