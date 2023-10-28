@@ -2,6 +2,9 @@
 tests/workdir/*
 workdir/*
 
+# This keeps getting in the way.
+.vscode/*
+
 # Prerequisites
 *.d
 
