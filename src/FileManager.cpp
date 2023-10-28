@@ -9,7 +9,7 @@ std::mutex FileManager::mutex_;               // mutex to keep class between mul
 FileManager* FileManager::GetInstance(const std::string& input, const std::string& output, const std::string& temp) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (instance == nullptr) {
-        if (!checkDirectoryExists(input)) {
+        if (!boost::filesystem::is_directory(input)) {
             throw std::invalid_argument("Input directory does not exist");
         }
         instance = new FileManager(input, output, temp);
