@@ -1,5 +1,6 @@
 #include "Workflow.hpp"
 
+#include <ctime>
 #include <map>
 #include <regex>
 #include <string>
@@ -65,10 +66,16 @@ void Workflow::execute() {
     cout << "[+] Mapper complete." << endl;
     cout << "[+] Sorting and aggregating tokens in intermediate files..." << endl;
 
+#ifdef DEBUG
+    time_t start_time;
+    time_t end_time;
+#endif
+
     input_files = this->fileManager->getDirectoryFileList(this->fileManager->getTempDirectory());
     for (int i = 0; i < input_files.size(); i++) {
 #ifdef DEBUG
         DEBUG_MSG("Processing input file " + input_files[i]);
+        time(&start_time);
 #endif
         map<string, vector<int> > sorted_words;
         vector<string> file_lines = this->fileManager->readFile(input_files[i]);
@@ -93,11 +100,14 @@ void Workflow::execute() {
             }
         }
 #ifdef DEBUG
-        DEBUG_MSG("File " + input_files[i] + " complete. (" + to_string(i + 1) + "/" + to_string(input_files.size()) + ")");
+        time(&end_time);
+        DEBUG_MSG("File " + input_files[i] + " complete. (" + to_string(i + 1) + "/" + to_string(input_files.size()) + ") Time: " + to_string(end_time - start_time) + " sec");
 #endif
     }
     cout << "[+] Completed sorting and aggregating tokens." << endl;
     cout << "[+] Reducing..." << endl;
 
     // Wes's code goes here.
+
+    cout << "[+] Workflow complete." << endl;
 }

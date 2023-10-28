@@ -1,6 +1,8 @@
 # Test output directories
-tests/workdir/*
-workdir/*
+tests/workdir/output/*
+tests/workdir/temp/*
+workdir/output/*
+workdir/temp/*
 
 # This keeps getting in the way.
 .vscode/*
