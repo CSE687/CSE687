@@ -25,6 +25,7 @@ test-reduce: build-reduce
 ## CLASS MAP
 build-map:
 	@ g++ src/Map.cpp \
+	src/FileManager.cpp \
 	tests/testMap.cpp \
 	$(STD) $(BOOST) \
 	-o bin/testMap
