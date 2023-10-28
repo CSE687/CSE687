@@ -45,6 +45,17 @@ test-filmgr: build-filmgr
 	@echo "\n*** TESTING FILE MANAGER CLASS ***"
 	@ ./bin/testFileManager
 
+## CLASS WORDTOKEN
+build-wt:
+	@ g++ src/WordToken.cpp \
+	tests/testWordToken.cpp \
+	$(STD) $(BOOST) \
+	-o bin/testWordToken
+
+test-wt: build-wt
+	@echo "\n*** TESTING WORDTOKEN CLASS ***"
+	@ ./bin/testWordToken
+
 build-debug:
 	@ g++ src/*.cpp -o bin/$(DEBUG_NAME) \
 	$(STD) $(BOOST) \
