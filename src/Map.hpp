@@ -2,48 +2,49 @@
 #define MAP_H
 
 //////////////////////////////////////////////////////////////
-//  Map.h       -   header file for Map class               //
+//  Map.hpp     -   header file for Map class               //
 //  Language    -   C++                                     //
 //  Author      -   Joe Cranston                            //
 //////////////////////////////////////////////////////////////
 
 /*
-The map class contains a method map() that takes a string containing a line from an input file.
-The map() method calls the tokenize() method which removes all punctuation, capitalization, and
-whitespace and returns a vector of strings, with each element being a new word. The map() method
-then calls the exportData() method which buffers output in memory and writes to disk when the
-buffer is full.
+The map class contains a method map() that takes a string containing a line from an input file, calls the 
+tokenize() method to remove all punctuation, capitalization, and whitespace, and finally calls the exportData()
+ method to buffer output in memory and write to disk when the buffer is full.
 */
 
-#include <string>
-#include <vector>
-#include <fstream>
+#include "FileManager.hpp"
 
 class Map{
+
     public:
 
     // class constructor
-    Map(char*, size_t);
+    Map();
     
     // tokenize string and write to disk
-    void map(std::string);
+    int map(std::string, std::string, int, int);
 
     // returns a vector of strings, with each element being a new word
-    std::vector<std::string> tokenize(std::string);
+    static std::vector<std::string> tokenize(std::string);
 
     // buffers memory and writes to disk when buffer is full
-    void exportData(std::string);
-
-    // class destructor
-    ~Map();
+    void exportData(std::string, int, int);
 
     private:
-    size_t bufferSize;
+    // pointer to instance of fileManager class
+    FileManager* fileManager;
+
+    // stores name of input file
+    std::string inputFilename;
+
+    // constant buffer size for each instance of Map
+    const int bufferSize = 1024;
+
+    // Buffer to store data before being written to disk
     std::string buffer;
-    char* outFilename;
-    std::ofstream outputFile;
-    
-    
-    
+
+    // Current line number of file that is being mapped
+    int lineNum;
 };
 #endif

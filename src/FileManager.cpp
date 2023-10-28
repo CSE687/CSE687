@@ -99,7 +99,7 @@ void FileManager::appendToFile(std::string filepath, std::string filename, std::
     std::fstream write_file; // create the output file object
 
     write_file.open(full_file_path, std::ofstream::app); // open file in append mode
-    write_file << file_line << std::endl; // write line to file
+    write_file << file_line; // write line to file
     write_file.close(); // close the file
 }
 
