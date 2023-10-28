@@ -5,68 +5,84 @@
 
 #include "FileManager.hpp"
 
+using namespace std;
+
+typedef vector<int> counts;
 class Workflow {
    private:
-    std::string inputDir;   // The input directory for the workflow
-    std::string tempDir;    // The temporary directory for the workflow
-    std::string outputDir;  // The output directory for the workflow
-
-    FileManager* fileManager;  // The file manager for the workflow
+    FileManager* fileManager;
+    //Map* mapper;
+    vector<string> input_files;
+    vector<string> skippedFiles{};  // The file manager for the workflow
 
    public:
     /**
      * @brief Construct a new Workflow object
      *
-     * @param inputDir The input directory for the workflow
-     * @param tempDir The temporary directory for the workflow
-     * @param outputDir The output directory for the workflow
+     * @param filemanager The filemanager to use for the workflow
      */
-    Workflow(std::string inputDir, std::string tempDir, std::string outputDir);
+    Workflow(FileManager*);
 
     /**
      * @brief Get the input directory for the workflow
      *
      * @return std::string The input directory
      */
-    std::string getInputDir() const;
+    string getInputDir() const;
 
     /**
      * @brief Set the input directory for the workflow
      *
      * @param inputDir The input directory
      */
-    void setInputDir(std::string inputDir);
+    void setInputDir(string inputDir);
 
     /**
      * @brief Get the temporary directory for the workflow
      *
      * @return std::string The temporary directory
      */
-    std::string getTempDir() const;
+    string getTempDir() const;
 
     /**
      * @brief Set the temporary directory for the workflow
      *
      * @param tempDir The temporary directory
      */
-    void setTempDir(std::string tempDir);
+    void setTempDir(string tempDir);
 
     /**
      * @brief Get the output directory for the workflow
      *
      * @return std::string The output directory
      */
-    std::string getOutputDir() const;
+    string getOutputDir() const;
 
     /**
      * @brief Set the output directory for the workflow
      *
      * @param outputDir The output directory
      */
-    void setOutputDir(std::string outputDir);
+    void setOutputDir(string outputDir);
 
     /**
-     * @brief Execute the workflow
+     * @brief Runs the Map function and checks the status of the operation for any errors.
+     *
+     * @param file Overrides using the inputDir and sends just this file to Map.
+     * @return int success or failure
+     */
+    int runMapper(string file);
+
+    /**
+     * @brief Runs the Reduce function and checks the status of the operation for any errors.
+     *
+     * @param file Overrides using the tempDir and sends just this file to Reduce.
+     * @return int success or failure
+     */
+    int runReducer(string file);
+
+    /**
+     * @brief Puts the entire workflow together.
      *
      */
     void execute();

@@ -2,7 +2,7 @@
 #include <boost/test/included/unit_test.hpp>
 #include "../src/Map.hpp"
 
-FileManager* fileManager = FileManager::GetInstance("workdir/input", "workdir/output", "workdir/temp");
+FileManager* fileManager = FileManager::GetInstance("tests/workdir/input", "tests/workdir/output", "tests/workdir/temp");
 
 BOOST_AUTO_TEST_CASE(TestMap_tokenize){
     std::vector<std::string> token;
@@ -22,24 +22,30 @@ BOOST_AUTO_TEST_CASE(TestMap_tokenize){
 
 BOOST_AUTO_TEST_CASE(TestMap_map){
 
-    size_t bufSize = 1024;
-    size_t lineCount = 2;
-    size_t currLine = 1;
+    int numLines = 1;
+    int currLine = 0;
     std::string inputFile = "tests/workdir/input/testMap.txt";
 
-    Map myMap = Map(inputFile, bufSize, lineCount);
+    Map myMap = Map();
 
     std::vector<std::string> fileLines;
     std::string testLine = "Hello Map Class!";
     fileLines.push_back(testLine);
     fileManager->writeFile(fileManager->getInputDirectory(), "testMap.txt", fileLines);
 
-    myMap.map(testLine, currLine);
 
-    std::vector<std::string> read_lines = fileManager->readFile(fileManager->getTempDirectory(), "testMapOutput.txt");
+    std::vector<std::string> readLinesFromInput = fileManager->readFile(fileManager->getInputDirectory(), "testMap.txt");
 
-    BOOST_TEST(read_lines[0] == "(hello, 1)");
-    BOOST_TEST(read_lines[1] == "(map, 1)");
-    BOOST_TEST(read_lines[2] == "(class, 1)");
+    std::string lineToTest = readLinesFromInput[0];
+
+    int wordCount = 0;
+    wordCount = myMap.map(inputFile, lineToTest, numLines, currLine);
+
+    std::vector<std::string> read_lines_from_output = fileManager->readFile(fileManager->getTempDirectory(), "testMapOutput.txt");
+
+    BOOST_TEST(read_lines_from_output[0] == "(hello, 1)");
+    BOOST_TEST(read_lines_from_output[1] == "(map, 1)");
+    BOOST_TEST(read_lines_from_output[2] == "(class, 1)");
+    BOOST_TEST(wordCount == 3);
     BOOST_TEST(true);
 }

@@ -4,29 +4,25 @@
 //  Author      -   Joe Cranston                            //
 //////////////////////////////////////////////////////////////
 
-#include <iostream>
-#include <fstream>
 #include <boost/tokenizer.hpp>
 #include <boost/algorithm/string.hpp>
-#include <vector>
 #include <boost/filesystem.hpp>
 #include "Map.hpp"
 
 // Initialize FileManager instance and reserve buffer space
-Map::Map(std::string inputFile, size_t bufSize, size_t lineCount){
+Map::Map(){
     this->fileManager = FileManager::GetInstance();
-    tempFilename = inputFile;
-    bufferSize = bufSize;
     buffer.reserve(bufferSize);
-    numLines = lineCount;
 }
 
-// Tokenize the line from the input file and write each tokenized word to disk
-void Map::map(std::string value, size_t currLine){
-    std::vector<std::string> words = tokenize(value);
+// Tokenize the line from the input file, write each tokenized word to disk, and return number of words tokenized
+int Map::map(std::string filename, std::string line, int numLines, int lineNum){
+    inputFilename = filename;
+    std::vector<std::string> words = tokenize(line);
     for (std::string word : words){
-        exportData(word, currLine);
+        exportData(word, numLines, lineNum);
     }
+    return words.size();
 }
 
 // Create a vector of strings, with each element being a new word
@@ -75,10 +71,10 @@ std::vector<std::string> Map::tokenize(std::string line){
 }
 
 // Buffer output in memory and write to disk when buffer is full or last line of input file is reached
-void Map::exportData(std::string word, size_t currLine){
+void Map::exportData(std::string word, int numLines, int lineNum){
     buffer += "(" + word + ", 1)\n";
-    if ((buffer.size() >= bufferSize) || (currLine == numLines - 1)){
-        std::string tmpFile = boost::filesystem::path(tempFilename).stem().string() + "Output.txt";
+    if ((buffer.size() >= bufferSize) || (lineNum == numLines - 1)){
+        std::string tmpFile = boost::filesystem::path(inputFilename).stem().string() + "Output.txt";
         this->fileManager->appendToFile(this->fileManager->getTempDirectory(), tmpFile, buffer);
         buffer.clear();
     }
