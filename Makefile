@@ -8,7 +8,7 @@ DEBUG_NAME=$(NAME)-debug
 all: build run
 
 build:
-	@ g++ src/*.cpp -o bin/$(NAME) \
+	@ g++ src/*.cpp -DDEBUG -o bin/$(NAME) \
 	$(STD) $(BOOST)
 
 ## CLASS REDUCE

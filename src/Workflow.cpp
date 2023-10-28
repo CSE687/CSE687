@@ -7,7 +7,7 @@
 #include "FileManager.hpp"
 #include "Map.hpp"
 #include "Reduce.hpp"
-//#include "WordToken.hpp"
+// #include "WordToken.hpp"
 
 using namespace std;
 
@@ -20,19 +20,13 @@ using namespace std;
 #define DEBUG_MSG(str) void() 0  // treat DEBUG_MSG as a no-op if not in DEBUG mode
 #endif
 
-/*
-Workflow::Workflow(string inputDir, string tempDir, string outputDir) {
-    // Initialize FileManager
-    fileManager = FileManager::GetInstance(inputDir, outputDir, tempDir);
-}
-*/
-
 Workflow::Workflow(FileManager* filemgr) {
     fileManager = filemgr;
 }
 
 void Workflow::execute() {
     input_files = fileManager->getDirectoryFileList(fileManager->getInputDirectory());
+
 #ifdef DEBUG
     string debugmsg = "All Files in Input Directory:\n";
     for (string i : input_files) {
@@ -40,11 +34,11 @@ void Workflow::execute() {
         debugmsg.append(i);
         debugmsg.append("\n");
     }
-    DEBUG_MSG(debugmsg)
+    DEBUG_MSG(debugmsg);
 #endif
 
     // Maps all the files:
-    Map mapper = Map();  // unimplemented; set temp dir.
+    Map mapper;  // unimplemented; set temp dir.
     for (string currfile : input_files) {
         vector<string> contents;
         try {
@@ -64,31 +58,30 @@ void Workflow::execute() {
             wordcount += mapper.map(currfile, currline, numLines, lineNum);  // unimplemented; tokenize, exportData, and return num tokens.
             lineNum++;
         }
-        cout << "Mapper tokenized " << wordcount << " words from " << currfile << endl;
+#ifdef DEBUG
+        DEBUG_MSG("Mapper tokenized " + to_string(wordcount) + " words from " + currfile);
+#endif
     }
+    cout << "Mapper completed intermediate files." << endl;
 }
-    // mapper's already created intermediate files with tokens
+// Sorts into a multimap:
+// vector<string> tempFiles = fileManager->getDirectoryFileList(fileManager->getTempDirectory());
+// Reduce reducer = Reduce(fileManager->getOutputDirectory());  // maybe this shuold go in the above for-loop?
+// for (string currfile : tempFiles) {
+//    vector<string> contents;
+//    try {
+//        contents = fileManager->readFile(currfile);
+//    } catch (exception& e) {
+//        cerr << "Exception while reading map " << currfile << ": " << e.what() << endl;
+//        continue;
+//    }
+//    vector<WordToken> tokens;
+//    sortme(contents, &tokens);
+//}  // tokens is aggregated and sorted; sending to Reduce item by item.
 
-
-    // Sorts into a multimap:
-    //vector<string> tempFiles = fileManager->getDirectoryFileList(fileManager->getTempDirectory());
-    //Reduce reducer = Reduce(fileManager->getOutputDirectory());  // maybe this shuold go in the above for-loop?
-    //for (string currfile : tempFiles) {
-    //    vector<string> contents;
-    //    try {
-    //        contents = fileManager->readFile(currfile);
-    //    } catch (exception& e) {
-    //        cerr << "Exception while reading map " << currfile << ": " << e.what() << endl;
-    //        continue;
-    //    }
-    //    vector<WordToken> tokens;
-    //    sortme(contents, &tokens);
-    //}  // tokens is aggregated and sorted; sending to Reduce item by item.
-
-    //for (WordToken i : tokens) {
-    //}
+// for (WordToken i : tokens) {
+// }
 //}
-
 
 /*
  * This helper function reads in a vector of strings that look like:
@@ -99,7 +92,7 @@ void Workflow::execute() {
  *  ("that", 1)
  *  ("ish", 1)
  * ...and sorts and aggregates their counts. The resulting vector gets passed to Reducer.
- 
+
 
 
 void sortme(vector<string> lines, vector<WordToken>* tokens) {

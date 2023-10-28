@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
             help();
         }
 
-        Workflow workflow = Workflow();
+        Workflow workflow = Workflow(filemanager);
         workflow.execute();
     }
 
