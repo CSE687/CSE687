@@ -8,13 +8,9 @@ FileManager* fileManager = FileManager::GetInstance("tests/workdir/input", "test
 
 BOOST_AUTO_TEST_CASE(test_workflow__initializes) {
     Workflow workflow = Workflow(fileManager);
-
-    BOOST_TEST(1 == 1);
 }
 
 BOOST_AUTO_TEST_CASE(test_workflow__executes) {
     Workflow workflow = Workflow(fileManager);
     workflow.execute();
-
-    BOOST_TEST(1 == 1);
 }
