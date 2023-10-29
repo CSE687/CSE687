@@ -78,7 +78,7 @@ run: build
 	@ ./bin/$(NAME) workdir/input workdir/output workdir/temp
 
 # run all unit tests
-test: test-map test-reduce test-filmgr
+test: test-map test-reduce test-filmgr test-workflow
 
 debug: build-debug
 	@ gdb --args bin/$(DEBUG_NAME) tests/workdir/input tests/workdir/output tests/workdir/temp
