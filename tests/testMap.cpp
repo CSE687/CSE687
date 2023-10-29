@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE(TestMap_map){
     int wordCount = 0;
     wordCount = myMap.map(inputFile, lineToTest, numLines, currLine);
 
-    std::vector<std::string> read_lines_from_output = fileManager->readFile(fileManager->getTempDirectory(), "testMapOutput.txt");
+    std::vector<std::string> read_lines_from_output = fileManager->readFile(fileManager->getTempDirectory(), "testMap.txt");
 
     BOOST_TEST(read_lines_from_output[0] == "(hello, 1)");
     BOOST_TEST(read_lines_from_output[1] == "(map, 1)");
