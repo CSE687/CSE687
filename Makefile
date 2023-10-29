@@ -11,6 +11,13 @@ build:
 	@ g++ src/*.cpp -o bin/$(NAME) \
 	$(STD) $(BOOST)
 
+build-dflag:
+	@ g++ src/*.cpp -DDEBUG -o bin/$(NAME) \
+	$(STD) $(BOOST)
+
+run-dflag: build-dflag
+	@ ./bin/$(NAME) workdir/input workdir/output workdir/temp
+
 ## CLASS REDUCE
 build-reduce:
 	@ g++ src/Reduce.cpp \
