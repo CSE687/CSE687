@@ -46,6 +46,8 @@ Winter 2023 class project
     - Dev: Wes
   - Workflow:
     - Dev: Wes
+  - Get VSCode Debugging working without a lot of fuss
+    - Dev: Wes
 
 ### Tasks
 
@@ -53,12 +55,12 @@ Winter 2023 class project
   - [X] `brew install boost`
 - [X] Write a basic unit test with Boost
 - [X] Log with Boost
-- [ ] Basic file with text separated on rows
-  - [ ] Read the text and count words
-- [ ] Output word counts to a file
+- [X] Basic file with text separated on rows
+  - [X] Read the text and count words
+- [X] Output word counts to a file
 
 ### Meeting Plans
 
 - [X] Get dev environments setup
 - [X] Broke up implementation work & test cases
-- [ ] Next: Put it all together
+- [X] Next: Put it all together

@@ -21,6 +21,7 @@ run-dflag: build-dflag
 ## CLASS REDUCE
 build-reduce:
 	@ g++ src/Reduce.cpp \
+	src/FileManager.cpp \
 	tests/testReduce.cpp \
 	$(STD) $(BOOST) \
 	-o bin/testReduce
@@ -52,6 +53,22 @@ test-filmgr: build-filmgr
 	@echo "\n*** TESTING FILE MANAGER CLASS ***"
 	@ ./bin/testFileManager
 
+## CLASS WORKFLOW
+build-workflow:
+	@ g++ \
+	src/FileManager.cpp \
+	src/Map.cpp \
+	src/Reduce.cpp \
+	src/Workflow.cpp \
+	tests/testWorkflow.cpp \
+	$(STD) $(BOOST) \
+	-o bin/testWorkflow
+
+test-workflow: build-workflow
+	@echo "\n*** TESTING WORKFLOW CLASS ***"
+	@ ./bin/testWorkflow
+
+## DEBUG
 build-debug:
 	@ g++ src/*.cpp -o bin/$(DEBUG_NAME) \
 	$(STD) $(BOOST) \
@@ -69,7 +86,7 @@ debug: build-debug
 # Remove compiled binaries, output files, and temp files
 clean:
 	@ find ./bin/ ! -name '.gitignore' -type f -exec rm -f {} +
-	@ find tests/workdir/output ! -name '.gitignore' -type f -exec rm -f {} +
-	@ find tests/workdir/temp ! -name '.gitignore' -type f -exec rm -f {} +
-	@ find workdir/output ! -name '.gitignore' -type f -exec rm -f {} +
-	@ find workdir/temp ! -name '.gitignore' -type f -exec rm -f {} +
+	@ rm -rf workdir/temp
+	@ rm -rf workdir/output
+	@ rm -rf tests/workdir/temp
+	@ rm -rf tests/workdir/output

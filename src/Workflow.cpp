@@ -8,7 +8,6 @@
 #include "FileManager.hpp"
 #include "Map.hpp"
 #include "Reduce.hpp"
-// #include "WordToken.hpp"
 
 using namespace std;
 
@@ -72,9 +71,11 @@ void Workflow::execute() {
 #endif
 
     input_files = this->fileManager->getDirectoryFileList(this->fileManager->getTempDirectory());
+
+    // Sort & Reduce all of the files output by Mapper
     for (int i = 0; i < input_files.size(); i++) {
 #ifdef DEBUG
-        DEBUG_MSG("Processing input file " + input_files[i]);
+        DEBUG_MSG("Processing temporary file " + input_files[i]);
         time(&start_time);
 #endif
         map<string, vector<int> > sorted_words;
@@ -99,15 +100,24 @@ void Workflow::execute() {
                 find_iter->second = value_vector;
             }
         }
+
+        // Initialize Reducer with output file name
+        Reduce reducer = Reduce(boost::filesystem::path(input_files[i]).stem().string() + ".txt");
+
+        // Loop over keys in sorted_words and reduce
+        for (auto& key : sorted_words) {
+            reducer.reduce(key.first, key.second);
+        }
+
+        // Write SUCCESS file to output directory
+        fileManager->appendToFile(fileManager->getOutputDirectory(), reducer.outputFilename + "-SUCCESS", "");
+
 #ifdef DEBUG
         time(&end_time);
         DEBUG_MSG("File " + input_files[i] + " complete. (" + to_string(i + 1) + "/" + to_string(input_files.size()) + ") Time: " + to_string(end_time - start_time) + " sec");
 #endif
     }
     cout << "[+] Completed sorting and aggregating tokens." << endl;
-    cout << "[+] Reducing..." << endl;
-
-    // Wes's code goes here.
 
     cout << "[+] Workflow complete." << endl;
 }
