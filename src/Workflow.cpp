@@ -1,5 +1,10 @@
+///////////////////////////////////////////////////////////////////////
+//  Workflow.cpp    -   manages the execution of the entire pipeline //
+//  Language        -   C++                                          //
+///////////////////////////////////////////////////////////////////////
 #include "Workflow.hpp"
 
+#include <ctime>
 #include <map>
 #include <regex>
 #include <string>
@@ -7,25 +12,17 @@
 #include "FileManager.hpp"
 #include "Map.hpp"
 #include "Reduce.hpp"
-// #include "WordToken.hpp"
 
 using namespace std;
 
 #ifdef DEBUG
-#define DEBUG_MSG(str)       \
-    do {                     \
-        cout << str << endl; \
+#define DEBUG_MSG(str)                    \
+    do {                                  \
+        cout << "DEBUG: " << str << endl; \
     } while (false)
 #else
 #define DEBUG_MSG(str) void() 0  // treat DEBUG_MSG as a no-op if not in DEBUG mode
 #endif
-
-/*
-Workflow::Workflow(string inputDir, string tempDir, string outputDir) {
-    // Initialize FileManager
-    fileManager = FileManager::GetInstance(inputDir, outputDir, tempDir);
-}
-*/
 
 Workflow::Workflow(FileManager* filemgr) {
     fileManager = filemgr;
@@ -33,6 +30,7 @@ Workflow::Workflow(FileManager* filemgr) {
 
 void Workflow::execute() {
     input_files = fileManager->getDirectoryFileList(fileManager->getInputDirectory());
+
 #ifdef DEBUG
     string debugmsg = "All Files in Input Directory:\n";
     for (string i : input_files) {
@@ -40,85 +38,91 @@ void Workflow::execute() {
         debugmsg.append(i);
         debugmsg.append("\n");
     }
-    DEBUG_MSG(debugmsg)
+    DEBUG_MSG(debugmsg);
 #endif
-
     // Maps all the files:
-    Map mapper = Map();  // unimplemented; set temp dir.
+    cout << "[+] Starting Mapper to parse input files..." << endl;
+    Map mapper;
     for (string currfile : input_files) {
         vector<string> contents;
         try {
             contents = fileManager->readFile(currfile);
         } catch (exception& e) {
+            cout << "File '" << currfile << "' could not be opened; skipping." << endl;
             skippedFiles.push_back(currfile);
             continue;
         }
         if (contents.size() == 0) {
             cout << "File '" << currfile << "' was empty; no mapping done." << endl;
             skippedFiles.push_back(currfile);
+            continue;
         }
         int wordcount = 0;
         int lineNum = 0;
         int numLines = contents.size();
         for (string currline : contents) {
-            wordcount += mapper.map(currfile, currline, numLines, lineNum);  // unimplemented; tokenize, exportData, and return num tokens.
+            wordcount += mapper.map(currfile, currline, numLines, lineNum);
             lineNum++;
         }
-        cout << "Mapper tokenized " << wordcount << " words from " << currfile << endl;
+#ifdef DEBUG
+        DEBUG_MSG("Mapper tokenized " + to_string(wordcount) + " words from " + currfile);
+#endif
     }
-}
-// mapper's already created intermediate files with tokens
+    cout << "[+] Mapper complete." << endl;
+    cout << "[+] Sorting and reducing tokens in intermediate files..." << endl;
 
-// Sorts into a multimap:
-// vector<string> tempFiles = fileManager->getDirectoryFileList(fileManager->getTempDirectory());
-// Reduce reducer = Reduce(fileManager->getOutputDirectory());  // maybe this shuold go in the above for-loop?
-// for (string currfile : tempFiles) {
-//    vector<string> contents;
-//    try {
-//        contents = fileManager->readFile(currfile);
-//    } catch (exception& e) {
-//        cerr << "Exception while reading map " << currfile << ": " << e.what() << endl;
-//        continue;
-//    }
-//    vector<WordToken> tokens;
-//    sortme(contents, &tokens);
-//}  // tokens is aggregated and sorted; sending to Reduce item by item.
+#ifdef DEBUG
+    time_t start_time;
+    time_t end_time;
+#endif
 
-// for (WordToken i : tokens) {
-// }
-//}
+    input_files = this->fileManager->getDirectoryFileList(this->fileManager->getTempDirectory());
 
-/*
- * This helper function reads in a vector of strings that look like:
- *  ("a", 1); --> ("a", {1, 1, 1, 1, 1})
- *  ("the", 1)
- *  ("is", 1)
- *  ("the", 1)
- *  ("that", 1)
- *  ("ish", 1)
- * ...and sorts and aggregates their counts. The resulting vector gets passed to Reducer.
-
-
-
-void sortme(vector<string> lines, vector<WordToken>* tokens) {
-    // grab data from each line
-    // create WordToken, append to tokens vector
-    // sort vector by length of counts
-    smatch m;
-    regex regexp("^\\(\"([a-z]+)\", (\\d+)\\)$");
-
-    for (string i : lines) {
-        regex_search(i, m, regexp);
-        if (m.size() < 2) {
-            cerr << "NOMATCH Line: " << i << endl;
-        } else {
-            auto f = map->find(m[1]);
-            if (f != map->end()) {
-                f->second.push_back(m[2]);
+    // Sort & Reduce all of the files output by Mapper
+    for (int i = 0; i < input_files.size(); i++) {
+#ifdef DEBUG
+        DEBUG_MSG("Processing temporary file " + input_files[i]);
+        time(&start_time);
+#endif
+        map<string, vector<int> > sorted_words;
+        vector<string> file_lines = this->fileManager->readFile(input_files[i]);
+        for (string j : file_lines) {
+            regex key_rgx("^\\(([a-z]+),");
+            regex value_rgx(", (\\d+)\\)");
+            smatch key, value_match;
+            regex_search(j, key, key_rgx);
+            regex_search(j, value_match, value_rgx);
+            if (key.size() < 2 || value_match.size() < 2) {
+                cout << "SKIP: No matches found in " << j << endl;
+                continue;
+            }
+            int value = stoi(value_match.str(1));
+            map<std::string, std::vector<int> >::iterator find_iter = sorted_words.find(key.str(1));
+            if (find_iter == sorted_words.end()) {
+                sorted_words.insert({key.str(1), {value}});
             } else {
-                map->insert();
+                vector<int> value_vector = find_iter->second;
+                value_vector.insert(value_vector.end(), value);
+                find_iter->second = value_vector;
             }
         }
+
+        // Initialize Reducer with output file name
+        Reduce reducer = Reduce(boost::filesystem::path(input_files[i]).stem().string() + ".txt");
+
+        // Loop over keys in sorted_words and reduce
+        for (auto& key : sorted_words) {
+            reducer.reduce(key.first, key.second);
+        }
+
+        // Write SUCCESS file to output directory
+        fileManager->appendToFile(fileManager->getOutputDirectory(), reducer.outputFilename + "-SUCCESS", "");
+
+#ifdef DEBUG
+        time(&end_time);
+        DEBUG_MSG("File " + input_files[i] + " complete. (" + to_string(i + 1) + "/" + to_string(input_files.size()) + ") Time: " + to_string(end_time - start_time) + " sec");
+#endif
     }
+    cout << "[+] Completed sorting and reducing tokens." << endl;
+    cout << "[+] Workflow complete." << endl;
 }
-*/
