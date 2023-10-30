@@ -8,7 +8,7 @@
 //////////////////////////////////////////////////////////////
 
 /*
-The map class contains a method map() that takes a string containing a line from an input file, calls the 
+The map class contains a method map() that takes a string containing a line from an input file, calls the
 tokenize() method to remove all punctuation, capitalization, and whitespace, and finally calls the exportData()
  method to buffer output in memory and write to disk when the buffer is full.
 */
@@ -21,7 +21,7 @@ class Map{
 
     // class constructor
     Map();
-    
+
     // tokenize string and write to disk
     int map(std::string, std::string, int, int);
 

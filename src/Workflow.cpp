@@ -7,9 +7,7 @@
 #include <ctime>
 #include <map>
 #include <regex>
-#include <string>
 
-#include "FileManager.hpp"
 #include "Map.hpp"
 #include "Reduce.hpp"
 
@@ -108,7 +106,7 @@ void Workflow::execute() {
         }
 
         // Initialize Reducer with output file name
-        Reduce reducer = Reduce(boost::filesystem::path(input_files[i]).stem().string() + ".txt");
+        Reduce reducer = Reduce(fileManager->getFileStem(input_files[i]) + ".txt");
 
         // Loop over keys in sorted_words and reduce
         for (auto& key : sorted_words) {
@@ -116,7 +114,10 @@ void Workflow::execute() {
         }
 
         // Write SUCCESS file to output directory
-        fileManager->appendToFile(fileManager->getOutputDirectory(), reducer.outputFilename + "-SUCCESS", "");
+        fileManager->writeFile(fileManager->getOutputDirectory(), reducer.outputFilename + "-SUCCESS", "");
+
+        // remove temp directory
+        fileManager->remove(input_files[i]);
 
 #ifdef DEBUG
         time(&end_time);

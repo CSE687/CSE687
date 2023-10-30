@@ -7,10 +7,7 @@
 #include "Map.hpp"
 
 #include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/tokenizer.hpp>
-
-#include "FileManager.hpp"
 
 // Initialize FileManager instance and reserve buffer space
 Map::Map() {
@@ -77,7 +74,7 @@ std::vector<std::string> Map::tokenize(std::string line) {
 void Map::exportData(std::string word, int numLines, int lineNum) {
     buffer += "(" + word + ", 1)\n";
     if ((buffer.size() >= bufferSize) || (lineNum == numLines - 1)) {
-        std::string tmpFile = boost::filesystem::path(inputFilename).stem().string() + ".txt";
+        std::string tmpFile = this->fileManager->getFileStem(inputFilename) + ".txt";
         this->fileManager->appendToFile(this->fileManager->getTempDirectory(), tmpFile, buffer);
         buffer.clear();
     }

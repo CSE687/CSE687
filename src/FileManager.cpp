@@ -92,6 +92,24 @@ void FileManager::writeFile(std::string filepath, std::string filename, std::vec
     write_file.close();  // close the file
 }
 
+void FileManager::writeFile(std::string filepath, std::string filename, std::string all_file_data) {
+    // if the directory doesn't exist, we need to create the directory
+    if (!checkDirectoryExists(filepath)) {
+        createDirectory(filepath);
+    }
+    std::string full_file_path = filepath + "/" + filename;
+    std::ofstream write_file(full_file_path);  // create the output file object
+
+    // open the file
+    if (!write_file.is_open()) {
+        write_file.open(full_file_path, std::ofstream::out);
+    }
+    // write each line to the file
+    write_file << all_file_data;
+
+    write_file.close();  // close the file
+}
+
 // writes a file given filepath, filename, and a string to append to end of file
 void FileManager::appendToFile(std::string filepath, std::string filename, std::string file_line) {
     // if the directory doesn't exist, we need to create the directory
@@ -111,13 +129,14 @@ void FileManager::deleteFile(std::string filepath, std::string filename) {
     boost::filesystem::remove(full_file_path);
 }
 
-void FileManager::deleteAll(std::string full_filepath) {
+void FileManager::remove(std::string full_filepath) {
     boost::filesystem::remove_all(full_filepath);
 }
 
-void FileManager::setInputDirectory(const std::string& directory) { this->input_directory = directory; }
-void FileManager::setOutputDirectory(const std::string& directory) { this->output_directory = directory; }
-void FileManager::setTempDirectory(const std::string& directory) { this->temp_directory = directory; }
+std::string FileManager::getFileStem(std::string filepath) {
+    return boost::filesystem::path(filepath).stem().string();
+}
+
 std::string FileManager::getInputDirectory() { return input_directory; }
 std::string FileManager::getOutputDirectory() { return output_directory; }
 std::string FileManager::getTempDirectory() { return temp_directory; }
