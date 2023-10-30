@@ -9,8 +9,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/tokenizer.hpp>
 
-#include "FileManager.hpp"
-
 // Initialize FileManager instance and reserve buffer space
 Map::Map() {
     this->fileManager = FileManager::GetInstance();

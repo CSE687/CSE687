@@ -1,7 +1,4 @@
 #include <boost/log/trivial.hpp>
-
-#include "FileManager.hpp"
-#include "Reduce.hpp"
 #include "Workflow.hpp"
 
 using namespace std;
