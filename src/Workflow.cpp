@@ -1,3 +1,7 @@
+///////////////////////////////////////////////////////////////////////
+//  Workflow.cpp    -   manages the execution of the entire pipeline //
+//  Language        -   C++                                          //
+///////////////////////////////////////////////////////////////////////
 #include "Workflow.hpp"
 
 #include <ctime>
@@ -44,18 +48,20 @@ void Workflow::execute() {
         try {
             contents = fileManager->readFile(currfile);
         } catch (exception& e) {
+            cout << "File '" << currfile << "' could not be opened; skipping." << endl;
             skippedFiles.push_back(currfile);
             continue;
         }
         if (contents.size() == 0) {
             cout << "File '" << currfile << "' was empty; no mapping done." << endl;
             skippedFiles.push_back(currfile);
+            continue;
         }
         int wordcount = 0;
         int lineNum = 0;
         int numLines = contents.size();
         for (string currline : contents) {
-            wordcount += mapper.map(currfile, currline, numLines, lineNum);  // unimplemented; tokenize, exportData, and return num tokens.
+            wordcount += mapper.map(currfile, currline, numLines, lineNum);
             lineNum++;
         }
 #ifdef DEBUG
@@ -118,6 +124,5 @@ void Workflow::execute() {
 #endif
     }
     cout << "[+] Completed sorting and aggregating tokens." << endl;
-
     cout << "[+] Workflow complete." << endl;
 }
