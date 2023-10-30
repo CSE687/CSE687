@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
 
         if (filemanager->checkDirectoryExists(filemanager->getInputDirectory())) {
             // Initialize & Execute Workflow
-            Workflow workflow = Workflow(argv[1], argv[2], argv[3]);
+            Workflow workflow = Workflow();
             workflow.execute();
         } else {
             std::cout << "Directory " << filemanager->getInputDirectory() << " does not exist.\n\n";

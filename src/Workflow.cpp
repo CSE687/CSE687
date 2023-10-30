@@ -7,7 +7,7 @@
 #include "FileManager.hpp"
 #include "Map.hpp"
 #include "Reduce.hpp"
-//#include "WordToken.hpp"
+// #include "WordToken.hpp"
 
 using namespace std;
 
@@ -67,28 +67,26 @@ void Workflow::execute() {
         cout << "Mapper tokenized " << wordcount << " words from " << currfile << endl;
     }
 }
-    // mapper's already created intermediate files with tokens
+// mapper's already created intermediate files with tokens
 
+// Sorts into a multimap:
+// vector<string> tempFiles = fileManager->getDirectoryFileList(fileManager->getTempDirectory());
+// Reduce reducer = Reduce(fileManager->getOutputDirectory());  // maybe this shuold go in the above for-loop?
+// for (string currfile : tempFiles) {
+//    vector<string> contents;
+//    try {
+//        contents = fileManager->readFile(currfile);
+//    } catch (exception& e) {
+//        cerr << "Exception while reading map " << currfile << ": " << e.what() << endl;
+//        continue;
+//    }
+//    vector<WordToken> tokens;
+//    sortme(contents, &tokens);
+//}  // tokens is aggregated and sorted; sending to Reduce item by item.
 
-    // Sorts into a multimap:
-    //vector<string> tempFiles = fileManager->getDirectoryFileList(fileManager->getTempDirectory());
-    //Reduce reducer = Reduce(fileManager->getOutputDirectory());  // maybe this shuold go in the above for-loop?
-    //for (string currfile : tempFiles) {
-    //    vector<string> contents;
-    //    try {
-    //        contents = fileManager->readFile(currfile);
-    //    } catch (exception& e) {
-    //        cerr << "Exception while reading map " << currfile << ": " << e.what() << endl;
-    //        continue;
-    //    }
-    //    vector<WordToken> tokens;
-    //    sortme(contents, &tokens);
-    //}  // tokens is aggregated and sorted; sending to Reduce item by item.
-
-    //for (WordToken i : tokens) {
-    //}
+// for (WordToken i : tokens) {
+// }
 //}
-
 
 /*
  * This helper function reads in a vector of strings that look like:
@@ -99,7 +97,7 @@ void Workflow::execute() {
  *  ("that", 1)
  *  ("ish", 1)
  * ...and sorts and aggregates their counts. The resulting vector gets passed to Reducer.
- 
+
 
 
 void sortme(vector<string> lines, vector<WordToken>* tokens) {

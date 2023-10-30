@@ -46,12 +46,10 @@ public:
     void appendToFile(std::string filepath, std::string filename, std::string file_line); // writes a file given filepath, filename, and a string to append to end of file
     void deleteAll(std::string full_filepath); // deletes a directory or file give full path
     void deleteFile(std::string filepath, std::string filename); // deletes a file
+    std::string getFileStem(std::string filepath); // gets the filename from a filepath
     std::string getInputDirectory(); // gets the input directory as specified by program and saved to class instance
     std::string getOutputDirectory(); // gets the output directory as specified by program and saved to class instance
     std::string getTempDirectory();  // gets the temporary directory as specified by program and saved to class instance
-    void setInputDirectory(const std::string &directory);
-    void setOutputDirectory(const std::string &directory);
-    void setTempDirectory(const std::string &directory);
 };
 
 #endif  // FILEMANAGER_H

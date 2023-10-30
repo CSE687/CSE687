@@ -77,7 +77,7 @@ std::vector<std::string> Map::tokenize(std::string line) {
 void Map::exportData(std::string word, int numLines, int lineNum) {
     buffer += "(" + word + ", 1)\n";
     if ((buffer.size() >= bufferSize) || (lineNum == numLines - 1)) {
-        std::string tmpFile = boost::filesystem::path(inputFilename).stem().string() + "Output.txt";
+        std::string tmpFile = this->fileManager->getFileStem(inputFilename) + "Output.txt";
         this->fileManager->appendToFile(this->fileManager->getTempDirectory(), tmpFile, buffer);
         buffer.clear();
     }
