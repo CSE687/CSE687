@@ -69,7 +69,7 @@ void Workflow::execute() {
 #endif
     }
     cout << "[+] Mapper complete." << endl;
-    cout << "[+] Sorting and aggregating tokens in intermediate files..." << endl;
+    cout << "[+] Sorting and reducing tokens in intermediate files..." << endl;
 
 #ifdef DEBUG
     time_t start_time;
@@ -123,6 +123,6 @@ void Workflow::execute() {
         DEBUG_MSG("File " + input_files[i] + " complete. (" + to_string(i + 1) + "/" + to_string(input_files.size()) + ") Time: " + to_string(end_time - start_time) + " sec");
 #endif
     }
-    cout << "[+] Completed sorting and aggregating tokens." << endl;
+    cout << "[+] Completed sorting and reducing tokens." << endl;
     cout << "[+] Workflow complete." << endl;
 }
