@@ -1,94 +1,54 @@
 #define BOOST_TEST_MODULE TestFileManager
-#include <boost/test/included/unit_test.hpp>
-#include "../src/FileManager.hpp"
-
-#include <string>
-#include <boost/filesystem.hpp>
-#include <vector>
-#include <iostream>
-#include <fstream>
 #include <time.h>
+
+#include <boost/filesystem.hpp>
+#include <boost/test/included/unit_test.hpp>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <vector>
+
+#include "../src/FileManager.hpp"
 
 FileManager* filemanager = FileManager::GetInstance("/workspaces/CSE687/tests/workdir/input", "/workspaces/CSE687/tests/workdir/output", "/workspaces/CSE687/tests/workdir/temp");
 
-BOOST_AUTO_TEST_CASE(test_filemanager__get_input_directory)
-{
+BOOST_AUTO_TEST_CASE(test_filemanager__get_input_directory) {
     std::string expected = "/workspaces/CSE687/tests/workdir/input";
     BOOST_TEST(expected == filemanager->getInputDirectory());
 }
 
-BOOST_AUTO_TEST_CASE(test_filemanager__set_input_directory)
-{
-    std::string expected = "/workspaces/CSE687/input";
-    filemanager->setInputDirectory(expected);
-    BOOST_TEST(expected == filemanager->getInputDirectory());
-    expected = "/workspaces/CSE687/tests/workdir/input";
-    filemanager->setInputDirectory(expected);
-    BOOST_TEST(expected == filemanager->getInputDirectory());
-}
-
-BOOST_AUTO_TEST_CASE(test_filemanager__get_output_directory)
-{
+BOOST_AUTO_TEST_CASE(test_filemanager__get_output_directory) {
     std::string expected = "/workspaces/CSE687/tests/workdir/output";
     BOOST_TEST(expected == filemanager->getOutputDirectory());
 }
 
-BOOST_AUTO_TEST_CASE(test_filemanager__set_output_directory)
-{
-    std::string expected = "/workspaces/CSE687/output";
-    filemanager->setOutputDirectory(expected);
-    BOOST_TEST(expected == filemanager->getOutputDirectory());
-    expected = "/workspaces/CSE687/tests/workdir/output";
-    filemanager->setOutputDirectory(expected);
-    BOOST_TEST(expected == filemanager->getOutputDirectory());
-}
-
-BOOST_AUTO_TEST_CASE(test_filemanager__get_temporary_directory)
-{
+BOOST_AUTO_TEST_CASE(test_filemanager__get_temporary_directory) {
     std::string expected = "/workspaces/CSE687/tests/workdir/temp";
     BOOST_TEST(expected == filemanager->getTempDirectory());
 }
 
-BOOST_AUTO_TEST_CASE(test_filemanager__set_temp_directory)
-{
-    std::string expected = "/workspaces/CSE687/temp";
-    filemanager->setTempDirectory(expected);
-    BOOST_TEST(expected == filemanager->getTempDirectory());
-    expected = "/workspaces/CSE687/tests/workdir/temp";
-    filemanager->setTempDirectory(expected);
-    BOOST_TEST(expected == filemanager->getTempDirectory());
-}
-
-BOOST_AUTO_TEST_CASE(test_filemanager__create_directory)
-{
+BOOST_AUTO_TEST_CASE(test_filemanager__create_directory) {
     filemanager->createDirectory("/workspaces/CSE687/tests/workdir/unit");
     BOOST_TEST(true == filemanager->checkDirectoryExists("/workspaces/CSE687/tests/workdir/unit"));
 }
 
-BOOST_AUTO_TEST_CASE(test_filemanager__delete_all)
-{
-    filemanager->deleteAll("/workspaces/CSE687/tests/workdir/unit");
+BOOST_AUTO_TEST_CASE(test_filemanager__delete_all) {
+    filemanager->remove("/workspaces/CSE687/tests/workdir/unit");
     BOOST_TEST(false == filemanager->checkDirectoryExists("/workspaces/CSE687/tests/workdir/unit"));
 }
 
-BOOST_AUTO_TEST_CASE(test_filemanager__check_directory_exists)
-{
-    filemanager->setOutputDirectory("tests/workdir/unit");
+BOOST_AUTO_TEST_CASE(test_filemanager__check_directory_exists) {
     BOOST_TEST(true == filemanager->checkDirectoryExists(filemanager->getInputDirectory()));
-    BOOST_TEST(false == filemanager->checkDirectoryExists(filemanager->getOutputDirectory()));
-    filemanager->setOutputDirectory("/workspaces/CSE687/tests/workdir/output");
-    BOOST_TEST(true == filemanager->checkDirectoryExists(filemanager->getOutputDirectory()));
+    BOOST_TEST(false == filemanager->checkDirectoryExists("tests/workdir/unit"));
 }
 
-BOOST_AUTO_TEST_CASE(test_filemanager__get_directory_file_list)
-{
+BOOST_AUTO_TEST_CASE(test_filemanager__get_directory_file_list) {
     std::vector<std::string> file_list = filemanager->getDirectoryFileList(filemanager->getInputDirectory());
 
     BOOST_TEST(0 < file_list.size());
 }
 
-BOOST_AUTO_TEST_CASE(test_filemanager__check_write_and_read)
-{
+BOOST_AUTO_TEST_CASE(test_filemanager__check_write_and_read) {
     std::vector<std::string> file_lines = {"First", "Second", "Third"};
     filemanager->writeFile(filemanager->getOutputDirectory(), "unit.txt", file_lines);
 
@@ -97,8 +57,7 @@ BOOST_AUTO_TEST_CASE(test_filemanager__check_write_and_read)
     BOOST_TEST(file_lines == read_lines);
 }
 
-BOOST_AUTO_TEST_CASE(test_filemanager__check_delete_file)
-{
+BOOST_AUTO_TEST_CASE(test_filemanager__check_delete_file) {
     std::vector<std::string> file_lines = {"First", "Second", "Third"};
     filemanager->writeFile(filemanager->getOutputDirectory(), "unit.txt", file_lines);
     filemanager->deleteFile(filemanager->getOutputDirectory(), "unit.txt");
@@ -108,8 +67,7 @@ BOOST_AUTO_TEST_CASE(test_filemanager__check_delete_file)
     BOOST_TEST(file_lines != read_lines);
 }
 
-BOOST_AUTO_TEST_CASE(test_filemanager__check_append_to_file)
-{
+BOOST_AUTO_TEST_CASE(test_filemanager__check_append_to_file) {
     std::srand(time(NULL));
     int random_num = std::rand();
     std::string file_line = "Append Line " + std::to_string(random_num);
