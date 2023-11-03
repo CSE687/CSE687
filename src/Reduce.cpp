@@ -15,7 +15,7 @@ int Reduce::_sum_iterator(const std::vector<int> &values) {
     return sum;
 }
 
-void Reduce::reduce(const std::string &key, const std::vector<int> &values) {
+void Reduce::execute(const std::string &key, const std::vector<int> &values) {
     int sum = Reduce::_sum_iterator(values);
     export_result(key, sum);
 }
