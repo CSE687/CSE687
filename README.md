@@ -64,3 +64,21 @@ Winter 2023 class project
 - [X] Get dev environments setup
 - [X] Broke up implementation work & test cases
 - [X] Next: Put it all together
+
+## Phase 2
+
+- Devs: Joe & Wes
+  - Inheritance
+    - Reduce & Map share a base class
+  - Polymorphism
+    - Workflow uses base class pointer to derived Reduce & Map class
+    - Reduce & Map both implement `execute` & `export` functions.
+  - Templates
+    - Use templates for declaration of `execute` and `export` functions
+- Alice
+  - Sort Class
+  - Sort Optimization
+- Chandler
+  - [ ] How do DLL's work?
+  - [ ] If Reduce & Map share a Base class - does the base class need a DLL?
+  - [ ] Does it need to be in a shared DLL?
