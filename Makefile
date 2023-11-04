@@ -1,15 +1,18 @@
-NAME=project-01
+NAME=project-02
 
 STD=-std=c++11
 BOOST=-DBOOST_LOG_DYN_LINK -lboost_log -lboost_log_setup -lboost_thread -lboost_system -lboost_filesystem
+DLL=-lmap -lreduce
 
 DEBUG_NAME=$(NAME)-debug
 
 all: build run
 
 build:
-	@ g++ src/*.cpp -o bin/$(NAME) \
-	$(STD) $(BOOST)
+	@ g++ -shared -fPIC src/Map.cpp -o bin/libmap.so
+	@ g++ -shared -fPIC src/Reduce.cpp -o bin/libreduce.so
+	@ g++ -Lbin/ -Wl,-rpath=bin -g src/main.cpp src/FileManager.cpp src/Workflow.cpp -o bin/$(NAME) \
+	$(STD) $(BOOST) $(DLL)
 
 build-dflag:
 	@ g++ src/*.cpp -DDEBUG -o bin/$(NAME) \
