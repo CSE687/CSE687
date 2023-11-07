@@ -68,13 +68,19 @@ Winter 2023 class project
 ## Phase 2
 
 - Devs: Joe & Wes
-  - Inheritance
-    - Reduce & Map share a base class
+  - [ ] Inheritance
+    - [ ] Reduce & Map share a base class `Executor`
+      - [ ] Attributes
+        - [ ] `outputFilename`
+        - [ ] `fileManager`
+      - [ ] Pure Virtual Member Function
+        - [ ] `toString()`
   - Polymorphism
-    - Workflow uses base class pointer to derived Reduce & Map class
-    - Reduce & Map both implement `execute` & `export` functions.
+    - [ ] (Cancelled) Workflow uses base class pointer to derived Reduce & Map class
+    - [ ] (Cancelled) Reduce & Map both implement `execute` & `export` functions.
+    - [ ] Implement `toString()`
   - Templates
-    - Use templates for declaration of `execute` and `export` functions
+    - [ ] Use templates for declaration of `execute` and `export` functions
 - Alice
   - Sort Class
   - Sort Optimization
@@ -82,3 +88,4 @@ Winter 2023 class project
   - [ ] How do DLL's work?
   - [ ] If Reduce & Map share a Base class - does the base class need a DLL?
   - [ ] Does it need to be in a shared DLL?
+  - [ ] Explicit is preferred
