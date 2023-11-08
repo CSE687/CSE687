@@ -1,10 +1,6 @@
 #ifndef MAP_H
 #define MAP_H
 
-#include <string>
-
-extern "C" void test(std::string input);
-
 //////////////////////////////////////////////////////////////
 //  Map.hpp     -   header file for Map class               //
 //  Language    -   C++                                     //
@@ -17,17 +13,21 @@ tokenize() method to remove all punctuation, capitalization, and whitespace, and
  method to buffer output in memory and write to disk when the buffer is full.
 */
 
+#include <string>
+#include <vector>
+
 // #include "FileManager.hpp"
 
-// class Map{
+extern "C" std::vector<std::string> map(std::string, std::string);
+static std::vector<std::string> tokenize(std::string);
 
-//     public:
-
+// class Map {
+//    public:
 //     // class constructor
 //     Map();
 
 //     // tokenize string and write to disk
-//     int map(std::string, std::string, int, int);
+//     virtual int map(std::string, std::string, int, int);
 
 //     // returns a vector of strings, with each element being a new word
 //     static std::vector<std::string> tokenize(std::string);
@@ -35,7 +35,7 @@ tokenize() method to remove all punctuation, capitalization, and whitespace, and
 //     // buffers memory and writes to disk when buffer is full
 //     void exportData(std::string, int, int);
 
-//     private:
+//    private:
 //     // pointer to instance of fileManager class
 //     FileManager* fileManager;
 

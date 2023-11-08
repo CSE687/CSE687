@@ -24,6 +24,7 @@
 #define WORKFLOW_H
 
 #include <string>
+#include <vector>
 
 #include "FileManager.hpp"
 

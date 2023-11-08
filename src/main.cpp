@@ -1,4 +1,5 @@
 #include <boost/log/trivial.hpp>
+
 #include "Workflow.hpp"
 
 using namespace std;
