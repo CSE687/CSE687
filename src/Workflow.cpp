@@ -4,6 +4,8 @@
 ///////////////////////////////////////////////////////////////////////
 #include "Workflow.hpp"
 
+#include <dlfcn.h>
+
 #include <ctime>
 #include <map>
 #include <regex>
@@ -40,7 +42,15 @@ void Workflow::execute() {
 #endif
     // Maps all the files:
     cout << "[+] Starting Mapper to parse input files..." << endl;
+
+    void* handle = dlopen("libmap.so", RTLD_LAZY);
+    if (!handle) {
+        cerr << "Could not open libmap";
+    }
+    dlerror();
+
     std::vector<std::string> (*map)(string, string);
+    map = (std::vector<std::string>(*)(string, string))dlsym(handle, "map");
 
     for (string currfile : input_files) {
         vector<string> contents;
@@ -59,8 +69,18 @@ void Workflow::execute() {
         int wordcount = 0;
         int lineNum = 0;
         int numLines = contents.size();
+        string buffer;
+        buffer.reserve(1024);
+        std::string tmpFile = fileManager->getFileStem(currfile) + ".txt";
         for (string currline : contents) {
-            wordcount += mapper.map(currfile, currline, numLines, lineNum);
+            vector<string> words = map(currfile, currline);
+            for (string word : words) {
+                buffer += "(" + word + ", 1)\n";
+                if ((buffer.size() >= 1024) || (lineNum == numLines - 1)) {
+                    fileManager->appendToFile(fileManager->getTempDirectory(), tmpFile, buffer);
+                    buffer.clear();
+                }
+            }
             lineNum++;
         }
 #ifdef DEBUG
