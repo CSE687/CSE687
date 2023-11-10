@@ -115,6 +115,8 @@ void Workflow::execute() {
         for (auto& key : sorted_words) {
             reducer.execute(key.first, key.second);
         }
+        // Guarantee that the buffer is flushed
+        reducer.flushBuffer();
 
         // Write SUCCESS file to output directory
         fileManager->writeFile(fileManager->getOutputDirectory(), reducer.outputFilename + "-SUCCESS", "");

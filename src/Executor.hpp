@@ -8,6 +8,12 @@ class Executor {
     std::string outputFilename;
     FileManager *fileManager;
 
+    // constant buffer size for each instance of Executor
+    const int bufferSize = 1024;
+
+    // Buffer to store data before being written to disk
+    std::string buffer;
+
     virtual void toString() = 0;
 };
 

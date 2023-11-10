@@ -36,6 +36,11 @@ class Reduce : public Executor {
     void export_result(const std::string &key, int value);
 
     /**
+     * @brief Flushes the buffer to the output file.
+     */
+    void flushBuffer();
+
+    /**
      * @brief Reduces the supplied vector of integers to a single integer sum and writes it to output file.
      *
      * @param key The key associated with the vector of integers.
