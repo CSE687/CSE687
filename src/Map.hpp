@@ -16,39 +16,10 @@ tokenize() method to remove all punctuation, capitalization, and whitespace, and
 #include <string>
 #include <vector>
 
-// #include "FileManager.hpp"
-
+// tokenize string
 extern "C" std::vector<std::string> map(std::string, std::string);
+
+// returns a vector of strings, with each element being a new word
 static std::vector<std::string> tokenize(std::string);
 
-// class Map {
-//    public:
-//     // class constructor
-//     Map();
-
-//     // tokenize string and write to disk
-//     virtual int map(std::string, std::string, int, int);
-
-//     // returns a vector of strings, with each element being a new word
-//     static std::vector<std::string> tokenize(std::string);
-
-//     // buffers memory and writes to disk when buffer is full
-//     void exportData(std::string, int, int);
-
-//    private:
-//     // pointer to instance of fileManager class
-//     FileManager* fileManager;
-
-//     // stores name of input file
-//     std::string inputFilename;
-
-//     // constant buffer size for each instance of Map
-//     const int bufferSize = 1024;
-
-//     // Buffer to store data before being written to disk
-//     std::string buffer;
-
-//     // Current line number of file that is being mapped
-//     int lineNum;
-// };
 #endif

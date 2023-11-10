@@ -10,31 +10,10 @@
 #include <boost/tokenizer.hpp>
 #include <iostream>
 
-// extern "C" Map* create_object() {
-//     return new Map;
-// }
-
-// extern "C" void destroy_object(Map* mapper) {
-//     delete mapper;
-// }
-
 extern "C" std::vector<std::string> map(std::string filename, std::string line) {
     std::vector<std::string> words = tokenize(line);
     return words;
 }
-
-// Initialize FileManager instance and reserve buffer space
-// Map::Map() {
-//     this->fileManager = FileManager::GetInstance();
-//     buffer.reserve(bufferSize);
-// }
-
-// Tokenize the line from the input file, write each tokenized word to disk, and return number of words tokenized
-// int Map::map(std::string filename, std::string line, int numLines, int lineNum) {
-//     for (std::string word : words) {
-//         exportData(word, numLines, lineNum);
-//     }
-// }
 
 // Create a vector of strings, with each element being a new word
 std::vector<std::string> tokenize(std::string line) {
@@ -80,13 +59,3 @@ std::vector<std::string> tokenize(std::string line) {
 
     return words;
 }
-
-// Buffer output in memory and write to disk when buffer is full or last line of input file is reached
-// void Map::exportData(std::string word, int numLines, int lineNum) {
-//     buffer += "(" + word + ", 1)\n";
-//     if ((buffer.size() >= bufferSize) || (lineNum == numLines - 1)) {
-//         std::string tmpFile = fileManager->getFileStem(inputFilename) + ".txt";
-//         fileManager->appendToFile(fileManager->getTempDirectory(), tmpFile, buffer);
-//         buffer.clear();
-//     }
-// }

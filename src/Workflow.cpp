@@ -10,8 +10,6 @@
 #include <map>
 #include <regex>
 
-#include "Reduce.hpp"
-
 #ifdef DEBUG
 #define DEBUG_MSG(str)                    \
     do {                                  \
@@ -44,10 +42,17 @@ void Workflow::execute() {
     if (!handle) {
         cerr << "Could not open libmap";
     }
-    dlerror();
+    char* error = dlerror();
+    if (error != NULL) {
+        cerr << (void*)error;
+    }
 
-    std::vector<std::string> (*mapptr)(string, string);
-    mapptr = (std::vector<std::string>(*)(string, string))dlsym(handle, "map");
+    vector<string> (*mapptr)(string, string);
+    mapptr = (vector<string>(*)(string, string))dlsym(handle, "map");
+    error = dlerror();
+    if (error != NULL) {
+        cerr << (void*)error;
+    }
 
     for (string currfile : input_files) {
         vector<string> contents;
@@ -66,7 +71,7 @@ void Workflow::execute() {
         int wordcount = 0;
         int lineNum = 0;
         int numLines = contents.size();
-        std::string tmpFile = fileManager->getFileStem(currfile) + ".txt";
+        string tmpFile = fileManager->getFileStem(currfile) + ".txt";
         for (string currline : contents) {
             vector<string> words = mapptr(currfile, currline);
             wordcount += words.size();
@@ -77,6 +82,7 @@ void Workflow::execute() {
         DEBUG_MSG("Mapper tokenized " + to_string(wordcount) + " words from " + currfile);
 #endif
     }
+    dlclose(handle);
     cout << "[+] Mapper complete." << endl;
     cout << "[+] Sorting and reducing tokens in intermediate files..." << endl;
 
@@ -117,15 +123,32 @@ void Workflow::execute() {
         }
 
         // Initialize Reducer with output file name
-        Reduce reducer = Reduce(fileManager->getFileStem(input_files[i]) + ".txt");
+        void* handle = dlopen("libreduce.so", RTLD_LAZY);
+        if (!handle) {
+            cerr << "Could not open libmap";
+        }
+        char* error = dlerror();
+        if (error != NULL) {
+            cerr << (void*)error;
+        }
 
+        string (*reduceptr)(const string, const vector<int>);
+        reduceptr = (string(*)(const string, const vector<int>))dlsym(handle, "reduce");
+        error = dlerror();
+        if (error != NULL) {
+            cerr << (void*)error;
+        }
+
+        string outFile = fileManager->getFileStem(input_files[i]);
+        fileManager->writeFile(fileManager->getOutputDirectory(), outFile + ".txt", "");
         // Loop over keys in sorted_words and reduce
         for (auto& key : sorted_words) {
-            reducer.reduce(key.first, key.second);
+            string line = reduceptr(key.first, key.second);
+            fileManager->appendToFile(fileManager->getOutputDirectory(), outFile + ".txt", line);
         }
 
         // Write SUCCESS file to output directory
-        fileManager->writeFile(fileManager->getOutputDirectory(), reducer.outputFilename + "-SUCCESS", "");
+        fileManager->writeFile(fileManager->getOutputDirectory(), outFile + "-SUCCESS", "");
 
         // remove temp directory
         fileManager->remove(input_files[i]);
