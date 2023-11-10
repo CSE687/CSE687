@@ -33,7 +33,7 @@ class Reduce : public Executor {
      * @param key The key associated with the vector of integers.
      * @param value The reduced sum of the vector of integers.
      */
-    void export_result(const std::string &key, int value);
+    void exportResult(const std::string &key, int value);
 
     /**
      * @brief Flushes the buffer to the output file.
