@@ -10,10 +10,7 @@
 #include <map>
 #include <regex>
 
-#include "Map.hpp"
 #include "Reduce.hpp"
-
-using namespace std;
 
 #ifdef DEBUG
 #define DEBUG_MSG(str)                    \
@@ -29,7 +26,7 @@ Workflow::Workflow(FileManager* filemgr) {
 }
 
 void Workflow::execute() {
-    input_files = fileManager->getDirectoryFileList(fileManager->getInputDirectory());
+    input_files = this->fileManager->getDirectoryFileList(this->fileManager->getInputDirectory());
 
 #ifdef DEBUG
     string debugmsg = "All Files in Input Directory:\n";
@@ -49,8 +46,8 @@ void Workflow::execute() {
     }
     dlerror();
 
-    std::vector<std::string> (*map)(string, string);
-    map = (std::vector<std::string>(*)(string, string))dlsym(handle, "map");
+    std::vector<std::string> (*mapptr)(string, string);
+    mapptr = (std::vector<std::string>(*)(string, string))dlsym(handle, "map");
 
     for (string currfile : input_files) {
         vector<string> contents;
@@ -69,18 +66,11 @@ void Workflow::execute() {
         int wordcount = 0;
         int lineNum = 0;
         int numLines = contents.size();
-        string buffer;
-        buffer.reserve(1024);
         std::string tmpFile = fileManager->getFileStem(currfile) + ".txt";
         for (string currline : contents) {
-            vector<string> words = map(currfile, currline);
-            for (string word : words) {
-                buffer += "(" + word + ", 1)\n";
-                if ((buffer.size() >= 1024) || (lineNum == numLines - 1)) {
-                    fileManager->appendToFile(fileManager->getTempDirectory(), tmpFile, buffer);
-                    buffer.clear();
-                }
-            }
+            vector<string> words = mapptr(currfile, currline);
+            wordcount += words.size();
+            fileManager->exportData(words, tmpFile, lineNum, numLines);
             lineNum++;
         }
 #ifdef DEBUG

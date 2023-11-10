@@ -20,6 +20,8 @@ class FileManager {
    private:
     static FileManager *instance;  // pointer to class instance
     static std::mutex mutex_;      // mutex to keep class between multiple threads
+    std::string buffer;
+
    protected:
     std::string input_directory;
     std::string output_directory;
@@ -29,6 +31,7 @@ class FileManager {
         input_directory = input;
         output_directory = output;
         temp_directory = temp;
+        buffer.reserve(1024);
     }
 
    public:
@@ -48,9 +51,10 @@ class FileManager {
     void remove(std::string full_filepath);                                                                         // deletes a directory or file given full path
     void deleteFile(std::string filepath, std::string filename);                                                    // deletes a file
     std::string getFileStem(std::string filepath);                                                                  // gets the filename from a filepath
-    std::string getInputDirectory();                                                                                // gets the input directory as specified by program and saved to class instance
-    std::string getOutputDirectory();                                                                               // gets the output directory as specified by program and saved to class instance
-    std::string getTempDirectory();                                                                                 // gets the temporary directory as specified by program and saved to class instance
+    void exportData(std::vector<std::string> words, std::string tmpFile, int lineNum, int numLines);
+    std::string getInputDirectory();   // gets the input directory as specified by program and saved to class instance
+    std::string getOutputDirectory();  // gets the output directory as specified by program and saved to class instance
+    std::string getTempDirectory();    // gets the temporary directory as specified by program and saved to class instance
 };
 
 #endif  // FILEMANAGER_H
