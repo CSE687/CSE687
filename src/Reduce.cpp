@@ -7,7 +7,9 @@
 Reduce::Reduce(std::string outputFilename) {
     this->fileManager = FileManager::GetInstance();
     this->outputFilename = outputFilename;
-    this->fileManager->writeFile(this->fileManager->getOutputDirectory(), this->outputFilename, "");  // creates a blank file and overwrites any pre-existing files with same name
+
+    // creates a blank file and overwrites any pre-existing files with same name
+    this->fileManager->writeFile(this->fileManager->getOutputDirectory(), this->outputFilename, "");
 }
 
 int Reduce::_sum_iterator(const std::vector<int> &values) {
@@ -26,4 +28,8 @@ void Reduce::export_result(const std::string &key, int value) {
         this->fileManager->getOutputDirectory(),
         this->outputFilename,
         "(" + key + ", " + std::to_string(value) + ")\n");
+}
+
+void Reduce::toString() {
+    std::cout << "Output filename: " << this->outputFilename << std::endl;
 }

@@ -109,16 +109,15 @@ void Workflow::execute() {
         }
 
         // Initialize Reducer with output file name
-        vector<Executor<std::string, std::vector<int>>*> executors;
-        executors.push_back(new Reduce(fileManager->getFileStem(input_files[i]) + ".txt"));
+        Reduce reducer = Reduce(fileManager->getFileStem(input_files[i]) + ".txt");
 
         // Loop over keys in sorted_words and execute
         for (auto& key : sorted_words) {
-            executors[0]->execute(key.first, key.second);
+            reducer.execute(key.first, key.second);
         }
 
         // Write SUCCESS file to output directory
-        fileManager->writeFile(fileManager->getOutputDirectory(), executors[0]->outputFilename + "-SUCCESS", "");
+        fileManager->writeFile(fileManager->getOutputDirectory(), reducer.outputFilename + "-SUCCESS", "");
 
         // remove temp directory
         fileManager->remove(input_files[i]);

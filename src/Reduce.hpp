@@ -23,12 +23,9 @@
 /**
  * @brief A class that reduces a vector of integers to a single integer sum and writes it to disk.
  */
-class Reduce : public Executor<std::string, std::vector<int>> {
+class Reduce : public Executor {
    public:
     Reduce(std::string outputFilename);
-    FileManager *fileManager;
-    // stores name of output file
-    std::string outputFilename;
 
     /**
      * @brief Exports the result of the reduction to a file.
@@ -53,5 +50,12 @@ class Reduce : public Executor<std::string, std::vector<int>> {
      * @return The sum of the supplied vector of integers.
      */
     int _sum_iterator(const std::vector<int> &values);
+
+    void setOutputFilename(std::string outputFilename);
+
+    /**
+     * @brief Prints the output filename.
+     */
+    void toString();
 };
 #endif

@@ -3,12 +3,12 @@
 
 #include "FileManager.hpp"
 
-template <typename... Args>
 class Executor {
    public:
     std::string outputFilename;
     FileManager *fileManager;
-    virtual void execute(const Args &...args) = 0;
+
+    virtual void toString() = 0;
 };
 
 #endif  // EXECUTOR_HPP
