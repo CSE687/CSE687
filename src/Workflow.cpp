@@ -93,6 +93,23 @@ void Workflow::execute() {
 
     input_files = this->fileManager->getDirectoryFileList(this->fileManager->getTempDirectory());
 
+    // Initialize Reducer with output file name
+    handle = dlopen("libreduce.so", RTLD_LAZY);
+    if (!handle) {
+        cerr << "Could not open libmap";
+    }
+    error = dlerror();
+    if (error != NULL) {
+        cerr << (void*)error;
+    }
+
+    string (*reduceptr)(const string, const vector<int>);
+    reduceptr = (string(*)(const string, const vector<int>))dlsym(handle, "reduce");
+    error = dlerror();
+    if (error != NULL) {
+        cerr << (void*)error;
+    }
+
     // Sort & Reduce all of the files output by Mapper
     for (int i = 0; i < input_files.size(); i++) {
 #ifdef DEBUG
@@ -122,23 +139,6 @@ void Workflow::execute() {
             }
         }
 
-        // Initialize Reducer with output file name
-        void* handle = dlopen("libreduce.so", RTLD_LAZY);
-        if (!handle) {
-            cerr << "Could not open libmap";
-        }
-        char* error = dlerror();
-        if (error != NULL) {
-            cerr << (void*)error;
-        }
-
-        string (*reduceptr)(const string, const vector<int>);
-        reduceptr = (string(*)(const string, const vector<int>))dlsym(handle, "reduce");
-        error = dlerror();
-        if (error != NULL) {
-            cerr << (void*)error;
-        }
-
         string outFile = fileManager->getFileStem(input_files[i]);
         fileManager->writeFile(fileManager->getOutputDirectory(), outFile + ".txt", "");
         // Loop over keys in sorted_words and reduce
@@ -158,6 +158,7 @@ void Workflow::execute() {
         DEBUG_MSG("File " + input_files[i] + " complete. (" + to_string(i + 1) + "/" + to_string(input_files.size()) + ") Time: " + to_string(end_time - start_time) + " sec");
 #endif
     }
+    dlclose(handle);
     cout << "[+] Completed sorting and reducing tokens." << endl;
     cout << "[+] Workflow complete." << endl;
 }
