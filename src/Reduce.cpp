@@ -43,6 +43,6 @@ void Reduce::flushBuffer() {
     buffer.clear();
 }
 
-void Reduce::toString() {
-    std::cout << "Output filename: " << this->outputFilename << std::endl;
+std::string Reduce::toString() {
+    return this->outputFilename;
 }

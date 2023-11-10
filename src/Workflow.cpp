@@ -124,6 +124,10 @@ void Workflow::execute() {
         // remove temp directory
         fileManager->remove(input_files[i]);
 
+        // Log the output filename
+        Executor* executor = &reducer;
+        cout << "Reducer finished processing " + executor->toString() << endl;
+
 #ifdef DEBUG
         time(&end_time);
         DEBUG_MSG("File " + input_files[i] + " complete. (" + to_string(i + 1) + "/" + to_string(input_files.size()) + ") Time: " + to_string(end_time - start_time) + " sec");

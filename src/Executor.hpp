@@ -14,7 +14,7 @@ class Executor {
     // Buffer to store data before being written to disk
     std::string buffer;
 
-    virtual void toString() = 0;
+    virtual std::string toString() = 0;
 };
 
 #endif  // EXECUTOR_HPP

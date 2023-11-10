@@ -61,6 +61,6 @@ class Reduce : public Executor {
     /**
      * @brief Prints the output filename.
      */
-    void toString();
+    std::string toString();
 };
 #endif
