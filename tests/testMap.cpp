@@ -21,27 +21,25 @@ BOOST_AUTO_TEST_CASE(TestMap_tokenize){
 }
 
 BOOST_AUTO_TEST_CASE(TestMap_map){
-
-    int numLines = 1;
-    int currLine = 0;
-    std::string inputFile = "tests/workdir/input/testMap.txt";
+    std::string inputFile = "testMap.txt";
 
     Map myMap = Map();
 
     std::vector<std::string> fileLines;
     std::string testLine = "Hello Map Class!";
     fileLines.push_back(testLine);
-    fileManager->writeFile(fileManager->getInputDirectory(), "testMap.txt", fileLines);
+    fileManager->writeFile(fileManager->getInputDirectory(), inputFile, fileLines);
 
 
-    std::vector<std::string> readLinesFromInput = fileManager->readFile(fileManager->getInputDirectory(), "testMap.txt");
+    std::vector<std::string> readLinesFromInput = fileManager->readFile(fileManager->getInputDirectory(), inputFile);
 
     std::string lineToTest = readLinesFromInput[0];
 
     int wordCount = 0;
-    wordCount = myMap.map(inputFile, lineToTest, numLines, currLine);
+    wordCount = myMap.map(inputFile, lineToTest);
+    myMap.flushBuffer();
 
-    std::vector<std::string> read_lines_from_output = fileManager->readFile(fileManager->getTempDirectory(), "testMap.txt");
+    std::vector<std::string> read_lines_from_output = fileManager->readFile(fileManager->getTempDirectory(), inputFile);
 
     BOOST_TEST(read_lines_from_output[0] == "(hello, 1)");
     BOOST_TEST(read_lines_from_output[1] == "(map, 1)");
