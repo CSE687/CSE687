@@ -4,13 +4,7 @@
 #include <iostream>
 #include <numeric>
 
-extern "C" std::string reduce(const std::string &key, const std::vector<int> &values) {
-    int sum = _sum_iterator(values);
-    std::string line = "(" + key + ", " + std::to_string(sum) + ")\n";
-    return line;
-}
-
-int _sum_iterator(const std::vector<int> &values) {
+extern "C" int reduce(const std::vector<int> &values) {
     int sum = std::accumulate(values.begin(), values.end(), 0);
     return sum;
 }

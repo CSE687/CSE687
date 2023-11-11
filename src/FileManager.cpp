@@ -138,14 +138,17 @@ std::string FileManager::getFileStem(std::string filepath) {
 }
 
 // Buffer output in memory and write to disk when buffer is full or last line of input file is reached
-void FileManager::exportData(std::vector<std::string> words, std::string tmpFile, int lineNum, int numLines) {
-    for (std::string word : words) {
-        buffer += "(" + word + ", 1)\n";
-        if ((buffer.size() >= 1024) || (lineNum == numLines - 1)) {
-            appendToFile(temp_directory, tmpFile, buffer);
-            buffer.clear();
-        }
+void FileManager::exportData(std::string key, std::string value, std::string dir, std::string tmpFile) {
+    buffer += "(" + key + ", " + value + ")\n";
+    if ((buffer.size() >= 1024)) {
+        // Write result to output file using fileManager
+        flushBuffer(dir, tmpFile);
     }
+}
+
+void FileManager::flushBuffer(std::string& dir, std::string& tmpFile) {
+    appendToFile(dir, tmpFile, buffer);
+    buffer.clear();
 }
 
 std::string FileManager::getInputDirectory() { return input_directory; }

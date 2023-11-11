@@ -6,6 +6,9 @@
 
 #include <dlfcn.h>
 
+#include <vector>
+using std::vector;
+
 #include <ctime>
 #include <map>
 #include <regex>
@@ -68,15 +71,15 @@ void Workflow::execute() {
             skippedFiles.push_back(currfile);
             continue;
         }
-        int wordcount = 0;
-        int lineNum = 0;
-        int numLines = contents.size();
+        int wordcount;
         string tmpFile = fileManager->getFileStem(currfile) + ".txt";
         for (string currline : contents) {
             vector<string> words = mapptr(currfile, currline);
             wordcount += words.size();
-            fileManager->exportData(words, tmpFile, lineNum, numLines);
-            lineNum++;
+            for (std::string word : words) {
+                fileManager->exportData(word, "1", fileManager->getTempDirectory(), tmpFile);
+            }
+            fileManager->flushBuffer(fileManager->getTempDirectory(), tmpFile);
         }
 #ifdef DEBUG
         DEBUG_MSG("Mapper tokenized " + to_string(wordcount) + " words from " + currfile);
@@ -103,8 +106,8 @@ void Workflow::execute() {
         cerr << (void*)error;
     }
 
-    string (*reduceptr)(const string, const vector<int>);
-    reduceptr = (string(*)(const string, const vector<int>))dlsym(handle, "reduce");
+    int (*reduceptr)(const vector<int>);
+    reduceptr = (int (*)(const vector<int>))dlsym(handle, "reduce");
     error = dlerror();
     if (error != NULL) {
         cerr << (void*)error;
@@ -116,7 +119,7 @@ void Workflow::execute() {
         DEBUG_MSG("Processing temporary file " + input_files[i]);
         time(&start_time);
 #endif
-        map<string, vector<int> > sorted_words;
+        map<string, vector<int>> sorted_words;
         vector<string> file_lines = this->fileManager->readFile(input_files[i]);
         for (string j : file_lines) {
             regex key_rgx("^\\(([a-z]+),");
@@ -129,7 +132,7 @@ void Workflow::execute() {
                 continue;
             }
             int value = stoi(value_match.str(1));
-            map<std::string, std::vector<int> >::iterator find_iter = sorted_words.find(key.str(1));
+            map<std::string, std::vector<int>>::iterator find_iter = sorted_words.find(key.str(1));
             if (find_iter == sorted_words.end()) {
                 sorted_words.insert({key.str(1), {value}});
             } else {
@@ -143,9 +146,11 @@ void Workflow::execute() {
         fileManager->writeFile(fileManager->getOutputDirectory(), outFile + ".txt", "");
         // Loop over keys in sorted_words and reduce
         for (auto& key : sorted_words) {
-            string line = reduceptr(key.first, key.second);
-            fileManager->appendToFile(fileManager->getOutputDirectory(), outFile + ".txt", line);
+            int key_count = reduceptr(key.second);
+            string value = std::to_string(key_count);
+            fileManager->exportData(key.first, value, fileManager->getOutputDirectory(), outFile);
         }
+        fileManager->flushBuffer(fileManager->getOutputDirectory(), outFile);
 
         // Write SUCCESS file to output directory
         fileManager->writeFile(fileManager->getOutputDirectory(), outFile + "-SUCCESS", "");

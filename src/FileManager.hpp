@@ -51,7 +51,8 @@ class FileManager {
     void remove(std::string full_filepath);                                                                         // deletes a directory or file given full path
     void deleteFile(std::string filepath, std::string filename);                                                    // deletes a file
     std::string getFileStem(std::string filepath);                                                                  // gets the filename from a filepath
-    void exportData(std::vector<std::string> words, std::string tmpFile, int lineNum, int numLines);
+    void exportData(std::string key, std::string value, std::string dir, std::string tmpFile);
+    void flushBuffer(std::string dir, std::string tmpFile);
     std::string getInputDirectory();   // gets the input directory as specified by program and saved to class instance
     std::string getOutputDirectory();  // gets the output directory as specified by program and saved to class instance
     std::string getTempDirectory();    // gets the temporary directory as specified by program and saved to class instance
