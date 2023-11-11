@@ -20,5 +20,5 @@ BOOST_AUTO_TEST_CASE(test_reduce__reduce) {
     std::string output_filename = "reduceTest.txt";
     Reduce reduce = Reduce(output_filename);
 
-    reduce.reduce("hello", std::vector<int>{1, 1});
+    reduce.execute("hello", std::vector<int>{1, 1});
 }

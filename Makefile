@@ -26,6 +26,7 @@ run-dflag: build-dflag
 ## CLASS REDUCE
 build-reduce:
 	@ g++ src/Reduce.cpp \
+	src/Executor.hpp \
 	src/FileManager.cpp \
 	tests/testReduce.cpp \
 	$(STD) $(BOOST) \
@@ -63,6 +64,7 @@ build-workflow:
 	@ g++ \
 	src/FileManager.cpp \
 	src/Map.cpp \
+	src/Executor.hpp \
 	src/Reduce.cpp \
 	src/Workflow.cpp \
 	tests/testWorkflow.cpp \
