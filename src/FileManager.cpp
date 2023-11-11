@@ -137,8 +137,9 @@ std::string FileManager::getFileStem(std::string filepath) {
     return boost::filesystem::path(filepath).stem().string();
 }
 
-// Buffer output in memory and write to disk when buffer is full or last line of input file is reached
+// exports the data given a key and value for map and reduce
 void FileManager::exportData(std::string key, std::string value, std::string dir, std::string tmpFile) {
+    // Buffer output in memory and write to disk when buffer is full or last line of input file is reached
     buffer += "(" + key + ", " + value + ")\n";
     if ((buffer.size() >= 1024)) {
         // Write result to output file using fileManager
@@ -146,7 +147,8 @@ void FileManager::exportData(std::string key, std::string value, std::string dir
     }
 }
 
-void FileManager::flushBuffer(std::string& dir, std::string& tmpFile) {
+// flushes the buffer for data export
+void FileManager::flushBuffer(std::string dir, std::string tmpFile) {
     appendToFile(dir, tmpFile, buffer);
     buffer.clear();
 }

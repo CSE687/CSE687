@@ -41,17 +41,21 @@ void Workflow::execute() {
     // Maps all the files:
     cout << "[+] Starting Mapper to parse input files..." << endl;
 
+    // opens and gets the hanle pointer to libmap
     void* handle = dlopen("libmap.so", RTLD_LAZY);
     if (!handle) {
         cerr << "Could not open libmap";
     }
+    // get rid and print any errors if they exits
     char* error = dlerror();
     if (error != NULL) {
         cerr << (void*)error;
     }
 
+    // create the function pointer for the map method
     vector<string> (*mapptr)(string, string);
     mapptr = (vector<string>(*)(string, string))dlsym(handle, "map");
+    // get rid and print any errors if they exits
     error = dlerror();
     if (error != NULL) {
         cerr << (void*)error;
@@ -74,13 +78,13 @@ void Workflow::execute() {
         int wordcount;
         string tmpFile = fileManager->getFileStem(currfile) + ".txt";
         for (string currline : contents) {
-            vector<string> words = mapptr(currfile, currline);
+            vector<string> words = mapptr(currfile, currline);  // run the map function
             wordcount += words.size();
             for (std::string word : words) {
                 fileManager->exportData(word, "1", fileManager->getTempDirectory(), tmpFile);
             }
-            fileManager->flushBuffer(fileManager->getTempDirectory(), tmpFile);
         }
+        fileManager->flushBuffer(fileManager->getTempDirectory(), tmpFile);
 #ifdef DEBUG
         DEBUG_MSG("Mapper tokenized " + to_string(wordcount) + " words from " + currfile);
 #endif
@@ -96,7 +100,7 @@ void Workflow::execute() {
 
     input_files = this->fileManager->getDirectoryFileList(this->fileManager->getTempDirectory());
 
-    // Initialize Reducer with output file name
+    // opens and gets the hanle pointer to libreduce
     handle = dlopen("libreduce.so", RTLD_LAZY);
     if (!handle) {
         cerr << "Could not open libmap";
@@ -106,6 +110,7 @@ void Workflow::execute() {
         cerr << (void*)error;
     }
 
+    // function pointer for reduce function
     int (*reduceptr)(const vector<int>);
     reduceptr = (int (*)(const vector<int>))dlsym(handle, "reduce");
     error = dlerror();
@@ -148,9 +153,9 @@ void Workflow::execute() {
         for (auto& key : sorted_words) {
             int key_count = reduceptr(key.second);
             string value = std::to_string(key_count);
-            fileManager->exportData(key.first, value, fileManager->getOutputDirectory(), outFile);
+            fileManager->exportData(key.first, value, fileManager->getOutputDirectory(), outFile + ".txt");
         }
-        fileManager->flushBuffer(fileManager->getOutputDirectory(), outFile);
+        fileManager->flushBuffer(fileManager->getOutputDirectory(), outFile + ".txt");
 
         // Write SUCCESS file to output directory
         fileManager->writeFile(fileManager->getOutputDirectory(), outFile + "-SUCCESS", "");
