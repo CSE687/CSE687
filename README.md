@@ -70,15 +70,17 @@ Winter 2023 class project
 - Devs: Joe & Wes
   - [ ] Inheritance
     - [ ] Reduce & Map share a base class `Executor`
-      - [ ] Attributes
-        - [ ] `outputFilename`
-        - [ ] `fileManager`
-      - [ ] Pure Virtual Member Function
-        - [ ] `toString()`
+      - [X] Attributes
+        - [X] `outputFilename`
+        - [X] `fileManager`
+      - [X] Pure Virtual Member Function
+        - [X] `toString()`
+      - [X] Reduce uses base class `Executor`
+      - [ ] Map uses base class `Executor`
   - Polymorphism
     - [ ] (Cancelled) Workflow uses base class pointer to derived Reduce & Map class
     - [ ] (Cancelled) Reduce & Map both implement `execute` & `export` functions.
-    - [ ] Implement `toString()`
+    - [X] Implement `toString()`
   - Templates
     - [ ] Use templates for declaration of `execute` and `export` functions
 - Alice

@@ -7,7 +7,11 @@
 Reduce::Reduce(std::string outputFilename) {
     this->fileManager = FileManager::GetInstance();
     this->outputFilename = outputFilename;
-    this->fileManager->writeFile(this->fileManager->getOutputDirectory(), this->outputFilename, "");  // creates a blank file and overwrites any pre-existing files with same name
+
+    buffer.reserve(bufferSize);
+
+    // creates a blank file and overwrites any pre-existing files with same name
+    this->fileManager->writeFile(this->fileManager->getOutputDirectory(), this->outputFilename, "");
 }
 
 int Reduce::_sum_iterator(const std::vector<int> &values) {
@@ -15,15 +19,30 @@ int Reduce::_sum_iterator(const std::vector<int> &values) {
     return sum;
 }
 
-void Reduce::reduce(const std::string &key, const std::vector<int> &values) {
+void Reduce::execute(const std::string &key, const std::vector<int> &values) {
     int sum = Reduce::_sum_iterator(values);
-    export_result(key, sum);
+    exportResult(key, sum);
 }
 
-void Reduce::export_result(const std::string &key, int value) {
+void Reduce::exportResult(const std::string &key, int value) {
+    buffer += "(" + key + ", " + std::to_string(value) + ")\n";
+
+    if ((buffer.size() >= bufferSize)) {
+        // Write result to output file using fileManager
+        this->flushBuffer();
+    }
+}
+
+void Reduce::flushBuffer() {
     // Write result to output file using fileManager
     fileManager->appendToFile(
         this->fileManager->getOutputDirectory(),
         this->outputFilename,
-        "(" + key + ", " + std::to_string(value) + ")\n");
+        buffer);
+
+    buffer.clear();
+}
+
+std::string Reduce::toString() {
+    return this->outputFilename;
 }

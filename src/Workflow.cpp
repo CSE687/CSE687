@@ -4,6 +4,9 @@
 ///////////////////////////////////////////////////////////////////////
 #include "Workflow.hpp"
 
+#include <vector>
+using std::vector;
+
 #include <ctime>
 #include <map>
 #include <regex>
@@ -82,7 +85,7 @@ void Workflow::execute() {
         DEBUG_MSG("Processing temporary file " + input_files[i]);
         time(&start_time);
 #endif
-        map<string, vector<int> > sorted_words;
+        map<string, vector<int>> sorted_words;
         vector<string> file_lines = this->fileManager->readFile(input_files[i]);
         for (string j : file_lines) {
             regex key_rgx("^\\(([a-z]+),");
@@ -95,7 +98,7 @@ void Workflow::execute() {
                 continue;
             }
             int value = stoi(value_match.str(1));
-            map<std::string, std::vector<int> >::iterator find_iter = sorted_words.find(key.str(1));
+            map<std::string, std::vector<int>>::iterator find_iter = sorted_words.find(key.str(1));
             if (find_iter == sorted_words.end()) {
                 sorted_words.insert({key.str(1), {value}});
             } else {
@@ -108,16 +111,22 @@ void Workflow::execute() {
         // Initialize Reducer with output file name
         Reduce reducer = Reduce(fileManager->getFileStem(input_files[i]) + ".txt");
 
-        // Loop over keys in sorted_words and reduce
+        // Loop over keys in sorted_words and execute
         for (auto& key : sorted_words) {
-            reducer.reduce(key.first, key.second);
+            reducer.execute(key.first, key.second);
         }
+        // Guarantee that the buffer is flushed
+        reducer.flushBuffer();
 
         // Write SUCCESS file to output directory
         fileManager->writeFile(fileManager->getOutputDirectory(), reducer.outputFilename + "-SUCCESS", "");
 
         // remove temp directory
         fileManager->remove(input_files[i]);
+
+        // Log the output filename
+        Executor* executor = &reducer;
+        cout << "Reducer finished processing " + executor->toString() << endl;
 
 #ifdef DEBUG
         time(&end_time);
