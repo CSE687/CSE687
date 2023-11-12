@@ -10,31 +10,31 @@
 
 #include "../src/FileManager.hpp"
 
-FileManager* filemanager = FileManager::GetInstance("/workspaces/CSE687/tests/workdir/input", "/workspaces/CSE687/tests/workdir/output", "/workspaces/CSE687/tests/workdir/temp");
+FileManager* filemanager = FileManager::GetInstance("tests/workdir/input", "tests/workdir/output", "tests/workdir/temp");
 
 BOOST_AUTO_TEST_CASE(test_filemanager__get_input_directory) {
-    std::string expected = "/workspaces/CSE687/tests/workdir/input";
+    std::string expected = "tests/workdir/input";
     BOOST_TEST(expected == filemanager->getInputDirectory());
 }
 
 BOOST_AUTO_TEST_CASE(test_filemanager__get_output_directory) {
-    std::string expected = "/workspaces/CSE687/tests/workdir/output";
+    std::string expected = "tests/workdir/output";
     BOOST_TEST(expected == filemanager->getOutputDirectory());
 }
 
 BOOST_AUTO_TEST_CASE(test_filemanager__get_temporary_directory) {
-    std::string expected = "/workspaces/CSE687/tests/workdir/temp";
+    std::string expected = "tests/workdir/temp";
     BOOST_TEST(expected == filemanager->getTempDirectory());
 }
 
 BOOST_AUTO_TEST_CASE(test_filemanager__create_directory) {
-    filemanager->createDirectory("/workspaces/CSE687/tests/workdir/unit");
-    BOOST_TEST(true == filemanager->checkDirectoryExists("/workspaces/CSE687/tests/workdir/unit"));
+    filemanager->createDirectory("tests/workdir/unit");
+    BOOST_TEST(true == filemanager->checkDirectoryExists("tests/workdir/unit"));
 }
 
 BOOST_AUTO_TEST_CASE(test_filemanager__delete_all) {
-    filemanager->remove("/workspaces/CSE687/tests/workdir/unit");
-    BOOST_TEST(false == filemanager->checkDirectoryExists("/workspaces/CSE687/tests/workdir/unit"));
+    filemanager->remove("tests/workdir/unit");
+    BOOST_TEST(false == filemanager->checkDirectoryExists("tests/workdir/unit"));
 }
 
 BOOST_AUTO_TEST_CASE(test_filemanager__check_directory_exists) {
