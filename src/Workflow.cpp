@@ -65,11 +65,12 @@ void Workflow::execute() {
 #ifdef DEBUG
         DEBUG_MSG("Mapper tokenized " + to_string(wordcount) + " words from " + currfile);
 #endif
+        mapper.flushBuffer();
     }
     Executor* execPtr = &mapper;
     std::string message = execPtr->toString();
     cout << message << endl;
-    //cout << "[+] Mapper complete." << endl;
+
     cout << "[+] Sorting and reducing tokens in intermediate files..." << endl;
 
 #ifdef DEBUG
