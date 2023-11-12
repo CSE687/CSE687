@@ -13,9 +13,10 @@ tokenize() method to remove all punctuation, capitalization, and whitespace, and
  method to buffer output in memory and write to disk when the buffer is full.
 */
 
+#include "Executor.hpp"
 #include "FileManager.hpp"
 
-class Map{
+class Map : public Executor{
 
     public:
 
@@ -23,28 +24,18 @@ class Map{
     Map();
 
     // tokenize string and write to disk
-    int map(std::string, std::string, int, int);
+    int map(std::string, std::string);
 
     // returns a vector of strings, with each element being a new word
     static std::vector<std::string> tokenize(std::string);
 
     // buffers memory and writes to disk when buffer is full
-    void exportData(std::string, int, int);
+    void exportData(std::string);
 
-    private:
-    // pointer to instance of fileManager class
-    FileManager* fileManager;
+    // Flush buffer to file
+    void flushBuffer();
 
-    // stores name of input file
-    std::string inputFilename;
-
-    // constant buffer size for each instance of Map
-    const int bufferSize = 1024;
-
-    // Buffer to store data before being written to disk
-    std::string buffer;
-
-    // Current line number of file that is being mapped
-    int lineNum;
+    // Overwrites pure virtual method from base class to return string saying mapper has finished
+    std::string toString();
 };
 #endif

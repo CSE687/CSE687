@@ -59,17 +59,18 @@ void Workflow::execute() {
             continue;
         }
         int wordcount = 0;
-        int lineNum = 0;
-        int numLines = contents.size();
         for (string currline : contents) {
-            wordcount += mapper.map(currfile, currline, numLines, lineNum);
-            lineNum++;
+            wordcount += mapper.map(fileManager->getFileStem(currfile + ".txt"), currline);
         }
 #ifdef DEBUG
         DEBUG_MSG("Mapper tokenized " + to_string(wordcount) + " words from " + currfile);
 #endif
+        mapper.flushBuffer();
     }
-    cout << "[+] Mapper complete." << endl;
+    Executor* execPtr = &mapper;
+    std::string message = execPtr->toString();
+    cout << message << endl;
+
     cout << "[+] Sorting and reducing tokens in intermediate files..." << endl;
 
 #ifdef DEBUG
