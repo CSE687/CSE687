@@ -89,6 +89,9 @@ void Workflow::execute() {
         map<string, vector<int>> sorted_words;
         vector<string> file_lines = this->fileManager->readFile(input_files[i]);
         for (string j : file_lines) {
+            if (j.empty()) {
+                continue;
+            }
             regex key_rgx("^\\(([a-z]+),");
             regex value_rgx(", (\\d+)\\)");
             smatch key, value_match;
