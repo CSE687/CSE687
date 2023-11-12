@@ -23,5 +23,6 @@ BOOST_AUTO_TEST_CASE(test_workflow__executes) {
     string first_line;
     string expected = "(a, 2)";
     getline(of, first_line);
+
     BOOST_TEST(expected.compare(first_line) == 0);
 }

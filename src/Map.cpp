@@ -16,11 +16,11 @@ Map::Map() {
 }
 
 // Tokenize the line from the input file, write each tokenized word to disk, and return number of words tokenized
-int Map::map(std::string filename, std::string line, int numLines, int lineNum) {
-    inputFilename = filename;
+int Map::map(std::string filename, std::string line) {
+    this->outputFilename = filename;
     std::vector<std::string> words = tokenize(line);
     for (std::string word : words) {
-        exportData(word, numLines, lineNum);
+        exportData(word);
     }
     return words.size();
 }
@@ -70,12 +70,22 @@ std::vector<std::string> Map::tokenize(std::string line) {
     return words;
 }
 
-// Buffer output in memory and write to disk when buffer is full or last line of input file is reached
-void Map::exportData(std::string word, int numLines, int lineNum) {
+// Buffer output in memory and write to disk when buffer is full
+void Map::exportData(std::string word) {
     buffer += "(" + word + ", 1)\n";
-    if ((buffer.size() >= bufferSize) || (lineNum == numLines - 1)) {
-        std::string tmpFile = this->fileManager->getFileStem(inputFilename) + ".txt";
-        this->fileManager->appendToFile(this->fileManager->getTempDirectory(), tmpFile, buffer);
-        buffer.clear();
+    if ((buffer.size() >= bufferSize)) {
+        this->flushBuffer();
     }
+}
+
+// Flush buffer to file and clear contents
+void Map::flushBuffer(){
+    this->fileManager->appendToFile(this->fileManager->getTempDirectory(), this->outputFilename, buffer);
+    buffer.clear();
+}
+
+// Return string message that map has finsihed
+std::string Map::toString(){
+    std::string message = "[+] Mapper complete.";
+    return message;
 }
