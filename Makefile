@@ -1,4 +1,4 @@
-NAME=project-01
+NAME=project-02
 
 STD=-std=c++11
 BOOST=-DBOOST_LOG_DYN_LINK -lboost_log -lboost_log_setup -lboost_thread -lboost_system -lboost_filesystem
