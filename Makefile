@@ -17,8 +17,10 @@ build:
 	$(STD) $(BOOST) $(DLL)
 
 build-dflag:
-	@ g++ -shared -fPIC -c src/Map.cpp -o bin/libmap.so
-	@ g++ -shared -fPIC -c src/Reduce.cpp -o bin/libreduce.so
+	@ g++ -fPIC -o bin/reduce.o -c src/Reduce.cpp
+	@ g++ -fPIC -o bin/map.o -c src/Map.cpp
+	@ g++ -shared -fPIC -o bin/libmap.so bin/map.o
+	@ g++ -shared -fPIC -o bin/libreduce.so bin/reduce.o
 	@ g++ -Lbin/ -Wl,-rpath=bin src/main.cpp src/FileManager.cpp src/Workflow.cpp -DDEBUG -o bin/$(NAME) \
 	$(STD) $(BOOST) $(DLL)
 
