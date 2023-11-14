@@ -91,3 +91,20 @@ Winter 2023 class project
   - [ ] If Reduce & Map share a Base class - does the base class need a DLL?
   - [ ] Does it need to be in a shared DLL?
   - [ ] Explicit is preferred
+
+## Phase 3
+
+Due week after midterm
+
+- [ ] Workflow handles
+  - [ ] Partition input based on File
+  - [ ] Creating thread pool
+- [ ] Workflow assigns each file to an available thread
+- [ ] Workflow waits for Mappers to complete before starting Reducers
+- [ ] Workflow runs a Reducer in a thread for each file in temp directory
+- [ ] Sort incorporated into Reduce
+  - Dev: Wes
+
+## Phase 4
+
+Due 2 weeks after Phase 3
