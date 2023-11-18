@@ -27,7 +27,7 @@ class Map : public Executor{
     int map(std::string, std::string);
 
     // returns a vector of strings, with each element being a new word
-    static std::vector<std::string> tokenize(std::string);
+    std::vector<std::string> tokenize(std::string);
 
     // buffers memory and writes to disk when buffer is full
     void exportData(std::string);
