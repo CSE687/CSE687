@@ -107,16 +107,16 @@ Due week after midterm
 
 ### Meeting 01 - 2023-11-18
 
-- Spawning Threads in `main`
+- [ ] Spawning Threads in `main`
   - Dev: Joe
-- Workflow Method: executeReduce(filename: string, threadId: int)
+- [ ] Workflow Method: executeReduce(filename: string, threadId: int)
   - filename: absolute path
   - Dev: Wes
 - [X] Sort/Reduce Combined
   - Dev: Chandler
-- Directly combine Sort/Reduce (map<string, vector<int>> -> map<string, int>)
+- [ ] Directly combine Sort/Reduce (map<string, vector<int>> -> map<string, int>)
   - Dev: Wes
-- Documentation
+- [ ] Documentation
   - Dev: Chandler
 
 ## Phase 4
