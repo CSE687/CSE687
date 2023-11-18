@@ -16,6 +16,20 @@ build:
 	@ g++ -Lbin/ -Wl,-rpath=bin src/main.cpp src/FileManager.cpp src/Workflow.cpp -o bin/$(NAME) \
 	$(STD) $(BOOST) $(DLL)
 
+run: build
+	@ ./bin/$(NAME) workdir/input workdir/output workdir/temp
+
+build-debug:
+	@ g++ -fPIC -o bin/reduce.o -c src/Reduce.cpp -ggdb
+	@ g++ -fPIC -o bin/map.o -c src/Map.cpp -ggdb
+	@ g++ -shared -fPIC -o bin/libmap.so bin/map.o -ggdb
+	@ g++ -shared -fPIC -o bin/libreduce.so bin/reduce.o -ggdb
+	@ g++ -Lbin/ -Wl,-rpath=bin src/main.cpp src/FileManager.cpp src/Workflow.cpp -ggdb -o bin/$(DEBUG_NAME) \
+	$(STD) $(BOOST) $(DLL)
+
+debug: build-debug
+	@ gdb --args ./bin/$(DEBUG_NAME) workdir/input workdir/output workdir/temp
+
 build-dflag:
 	@ g++ -fPIC -o bin/reduce.o -c src/Reduce.cpp
 	@ g++ -fPIC -o bin/map.o -c src/Map.cpp
@@ -80,20 +94,8 @@ test-workflow: build-workflow
 	@echo "\n*** TESTING WORKFLOW CLASS ***"
 	@ ./bin/testWorkflow
 
-## DEBUG
-build-debug:
-	@ g++ src/*.cpp -o bin/$(DEBUG_NAME) \
-	$(STD) $(BOOST) \
-	-ggdb
-
-run: build
-	@ ./bin/$(NAME) workdir/input workdir/output workdir/temp
-
 # run all unit tests
 test: test-map test-reduce test-filmgr test-workflow
-
-debug: build-debug
-	@ gdb --args bin/$(DEBUG_NAME) tests/workdir/input tests/workdir/output tests/workdir/temp
 
 # Remove compiled binaries, output files, and temp files
 clean:
