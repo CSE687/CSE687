@@ -17,8 +17,13 @@ BOOST_AUTO_TEST_CASE(test_reduce__sum_iterator) {
 }
 
 BOOST_AUTO_TEST_CASE(test_reduce__reduce) {
-    std::string output_filename = "reduceTest.txt";
+    std::string output_filename = "testReduce.txt";
     Reduce reduce = Reduce(output_filename);
 
-    reduce.execute("hello", std::vector<int>{1, 1});
+    // copying reduce test file to temp
+    std::vector<std::string> file_data = fileManager->readFile(fileManager->getInputDirectory(), "testReduce.txt");
+    fileManager->writeFile(fileManager->getTempDirectory(), "testReduce.txt", file_data);
+
+    std::string test_file = fileManager->getTempDirectory() + "/testReduce.txt";
+    reduce.execute(test_file);
 }

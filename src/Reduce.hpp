@@ -11,6 +11,7 @@
 */
 
 #include <algorithm>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -24,6 +25,9 @@
  * @brief A class that reduces a vector of integers to a single integer sum and writes it to disk.
  */
 class Reduce : public Executor {
+   private:
+    std::map<std::string, std::vector<int>> sorted_words;
+
    public:
     Reduce(std::string outputFilename);
 
@@ -46,7 +50,7 @@ class Reduce : public Executor {
      * @param key The key associated with the vector of integers.
      * @param values The vector of integers to be reduced.
      */
-    void execute(const std::string &key, const std::vector<int> &values);
+    void execute(const std::string &input_file);
 
     /**
      * @brief Returns the sum of the supplied vector of integers.
@@ -62,5 +66,10 @@ class Reduce : public Executor {
      * @brief Prints the output filename.
      */
     std::string toString();
+
+    /**
+     * @brief Sorts the words in a file into a vector
+     */
+    void sort(const std::string &input_file);
 };
 #endif
