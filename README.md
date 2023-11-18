@@ -114,7 +114,7 @@ Due week after midterm
   - Dev: Wes
 - [X] Sort/Reduce Combined
   - Dev: Chandler
-- Directly combined Sort/Reduce (map<string, vector<inv>> -> map<string, int>)
+- Directly combine Sort/Reduce (map<string, vector<int>> -> map<string, int>)
   - Dev: Wes
 - Documentation
   - Dev: Chandler
