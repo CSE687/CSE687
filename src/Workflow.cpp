@@ -182,9 +182,4 @@ void Workflow::executeMap(std::string filename, int threadID){
         DEBUG_MSG("Mapper tokenized " + to_string(wordcount) + " words from " + currfile);
 #endif
         mapper.flushBuffer();
-    //Executor* execPtr = &mapper;
-    //std::string message = execPtr->toString();
-    //cout_mutex.lock();
-    //cout << message << endl;
-    //cout_mutex.unlock();
 }
