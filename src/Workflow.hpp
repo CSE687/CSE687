@@ -44,15 +44,9 @@ class Workflow {
      */
     Workflow(FileManager*);
 
-    /**
-     * @brief Puts the entire workflow together.
-     *
-     */
-    void execute();
-
     void executeMap(std::string, int);
 
-    // void reduceThread();
+    void executeReduce(std::string, int);
 };
 
 #endif  // WORKFLOW_H

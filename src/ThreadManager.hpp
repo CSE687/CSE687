@@ -36,6 +36,22 @@ class ThreadManager {
     // Frees up any dynamically allcoated memory
     void deleteMapThreads();
 
+    // Loops over input file vector, spawning a new Reduce thread for each file. Also
+    // calls join on each thread and frees up all dynamic memory
+    void executeReduceThreads();
+
+    // Calls threadReduce for each thread created
+    void spawnReduceThreads(std::string*, int threadID);
+
+    // Each thread executes the Workflow::executeReduce method
+    static void threadReduce(void* arg);
+
+    // Calls join() on each thread to wait for each to complete
+    void joinReduceThreads();
+
+    // Frees up any dynamically allcoated memory
+    void deleteReduceThreads();
+
     // Unique data for each thread
     struct threadData {
         Workflow* myWorkflow;

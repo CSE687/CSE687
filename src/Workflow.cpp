@@ -7,10 +7,10 @@
 #include <vector>
 using std::vector;
 
+#include <boost/thread/mutex.hpp>
 #include <ctime>
 #include <map>
 #include <regex>
-#include <boost/thread/mutex.hpp>
 
 #include "Map.hpp"
 #include "Reduce.hpp"
@@ -46,8 +46,8 @@ void Workflow::execute() {
     DEBUG_MSG(debugmsg);
 #endif
 
-    
-    
+
+
 
     // Maps all the files:
     std::cout << "[+] Starting Mapper to parse input files..." << endl;
@@ -113,8 +113,7 @@ void Workflow::execute() {
 
 */
 
-
-void Workflow::executeMap(std::string filename, int threadID){
+void Workflow::executeMap(std::string filename, int threadID) {
     Map mapper;
     vector<string> contents;
     try {
@@ -139,7 +138,18 @@ void Workflow::executeMap(std::string filename, int threadID){
         wordcount += mapper.map(fileManager->getFileStem(filename + ".txt"), currline);
     }
 #ifdef DEBUG
-        DEBUG_MSG("Mapper tokenized " + to_string(wordcount) + " words from " + currfile);
+    DEBUG_MSG("Mapper tokenized " + to_string(wordcount) + " words from " + currfile);
 #endif
-        mapper.flushBuffer();
+    mapper.flushBuffer();
+}
+
+void Workflow::executeReduce(std::string filename, int threadID) {
+    // Initialize Reducer with output file name
+    Reduce reducer = Reduce(fileManager->getFileStem(filename + ".txt"));
+
+    cout_mutex.lock();
+    std::cout << "Thread " << threadID << " is reducing file " << filename << std::endl;
+    cout_mutex.unlock();
+
+    reducer.execute(filename);
 }
