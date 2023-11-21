@@ -102,8 +102,22 @@ Due week after midterm
 - [ ] Workflow assigns each file to an available thread
 - [ ] Workflow waits for Mappers to complete before starting Reducers
 - [ ] Workflow runs a Reducer in a thread for each file in temp directory
-- [ ] Sort incorporated into Reduce
+- [X] Sort incorporated into Reduce
   - Dev: Wes
+
+### Meeting 01 - 2023-11-18
+
+- [ ] Spawning Threads in `main`
+  - Dev: Joe
+- [ ] Workflow Method: executeReduce(filename: string, threadId: int)
+  - filename: absolute path
+  - Dev: Wes
+- [X] Sort/Reduce Combined
+  - Dev: Chandler
+- [ ] Directly combine Sort/Reduce (map<string, vector<int>> -> map<string, int>)
+  - Dev: Wes
+- [ ] Documentation
+  - Dev: Chandler
 
 ## Phase 4
 

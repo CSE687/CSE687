@@ -87,56 +87,16 @@ void Workflow::execute() {
     time_t start_time;
     time_t end_time;
 #endif
-
-    input_files = this->fileManager->getDirectoryFileList(this->fileManager->getTempDirectory());
-
-    // Sort & Reduce all of the files output by Mapper
+    std::vector<std::string> input_files = this->fileManager->getDirectoryFileList(this->fileManager->getTempDirectory());
     for (int i = 0; i < input_files.size(); i++) {
 #ifdef DEBUG
         DEBUG_MSG("Processing temporary file " + input_files[i]);
         time(&start_time);
 #endif
-        map<string, vector<int>> sorted_words;
-        vector<string> file_lines = this->fileManager->readFile(input_files[i]);
-        for (string j : file_lines) {
-            if (j.empty()) {
-                continue;
-            }
-            regex key_rgx("^\\(([a-z]+),");
-            regex value_rgx(", (\\d+)\\)");
-            smatch key, value_match;
-            regex_search(j, key, key_rgx);
-            regex_search(j, value_match, value_rgx);
-            if (key.size() < 2 || value_match.size() < 2) {
-                cout << "SKIP: No matches found in " << j << endl;
-                continue;
-            }
-            int value = stoi(value_match.str(1));
-            map<std::string, std::vector<int>>::iterator find_iter = sorted_words.find(key.str(1));
-            if (find_iter == sorted_words.end()) {
-                sorted_words.insert({key.str(1), {value}});
-            } else {
-                vector<int> value_vector = find_iter->second;
-                value_vector.insert(value_vector.end(), value);
-                find_iter->second = value_vector;
-            }
-        }
-
         // Initialize Reducer with output file name
         Reduce reducer = Reduce(fileManager->getFileStem(input_files[i]) + ".txt");
 
-        // Loop over keys in sorted_words and execute
-        for (auto& key : sorted_words) {
-            reducer.execute(key.first, key.second);
-        }
-        // Guarantee that the buffer is flushed
-        reducer.flushBuffer();
-
-        // Write SUCCESS file to output directory
-        fileManager->writeFile(fileManager->getOutputDirectory(), reducer.outputFilename + "-SUCCESS", "");
-
-        // remove temp directory
-        fileManager->remove(input_files[i]);
+        reducer.execute(input_files[i]);
 
         // Log the output filename
         Executor* executor = &reducer;
