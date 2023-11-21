@@ -79,13 +79,13 @@ void Map::exportData(std::string word) {
 }
 
 // Flush buffer to file and clear contents
-void Map::flushBuffer(){
+void Map::flushBuffer() {
     this->fileManager->appendToFile(this->fileManager->getTempDirectory(), this->outputFilename, buffer);
     buffer.clear();
 }
 
 // Return string message that map has finsihed
-std::string Map::toString(){
+std::string Map::toString() {
     std::string message = "[+] Mapper complete.";
     return message;
 }

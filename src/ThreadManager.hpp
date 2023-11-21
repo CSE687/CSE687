@@ -3,20 +3,20 @@
 
 /*
 The ThreadManager class abstracts all thread operations into a class. The constructor takes a pointer to a FileManager
-instance and a pointer to a vector containing all input files to be mapped. The executeMapThreads() method loops over 
+instance and a pointer to a vector containing all input files to be mapped. The executeMapThreads() method loops over
 this vector and spawns a map thread for each input file. The threads all operate on the executeMap() method of the
-Workflow class. Once each thread is spawned, the joinMapThreads() waits for each to complete before the deleteMapThreads() 
+Workflow class. Once each thread is spawned, the joinMapThreads() waits for each to complete before the deleteMapThreads()
 method frees up all dynamically allocated memory.
 */
+
+#include <boost/thread.hpp>
 
 #include "Executor.hpp"
 #include "FileManager.hpp"
 #include "Workflow.hpp"
-#include <boost/thread.hpp>
 
-class ThreadManager{
-
-    public:
+class ThreadManager {
+   public:
     // class constructor
     ThreadManager(FileManager*, vector<string>*);
 
@@ -54,6 +54,5 @@ class ThreadManager{
 
     // Vector of pointers to threadData structs
     vector<ThreadManager::threadData*> threadDataList;
-
 };
 #endif

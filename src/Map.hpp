@@ -16,10 +16,8 @@ tokenize() method to remove all punctuation, capitalization, and whitespace, and
 #include "Executor.hpp"
 #include "FileManager.hpp"
 
-class Map : public Executor{
-
-    public:
-
+class Map : public Executor {
+   public:
     // class constructor
     Map();
 
