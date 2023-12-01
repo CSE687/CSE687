@@ -14,8 +14,8 @@ void ThreadManager::executeMapThreads() {
     for (int i = 0; i < input_files->size(); i++) {
         spawnMapThreads(&input_files->at(i), i + 1);
     }
-    joinMapThreads();
-    deleteMapThreads();
+    joinThreadListThreads();
+    deleteThreadListThreads();
 }
 
 // Spawns a new Reduce thread for each input file
@@ -25,8 +25,8 @@ void ThreadManager::executeReduceThreads() {
     for (int i = 0; i < input_files->size(); i++) {
         spawnReduceThreads(&input_files->at(i), i + 1);
     }
-    joinReduceThreads();
-    deleteReduceThreads();
+    joinThreadListThreads();
+    deleteThreadListThreads();
 }
 
 // Creates a new struct threadData pointer for each thread, which stores a unique
@@ -68,33 +68,14 @@ void ThreadManager::threadReduce(void* arg) {
 }
 
 // Joins all threads so the code waits for each to complete processing
-void ThreadManager::joinMapThreads() {
-    for (int j = 0; j < threadList.size(); j++) {
-        threadList[j]->join();
-    }
-}
-
-// Joins all threads so the code waits for each to complete processing
-void ThreadManager::joinReduceThreads() {
+void ThreadManager::joinThreadListThreads() {
     for (int j = 0; j < threadList.size(); j++) {
         threadList[j]->join();
     }
 }
 
 // Deletes all dynamically allocated memory from class
-void ThreadManager::deleteMapThreads() {
-    for (int k = 0; k < threadDataList.size(); k++) {
-        delete threadDataList[k]->myWorkflow;
-        delete threadDataList[k];
-    }
-
-    for (int y = 0; y < threadList.size(); y++) {
-        delete threadList[y];
-    }
-}
-
-// Deletes all dynamically allocated memory from class
-void ThreadManager::deleteReduceThreads() {
+void ThreadManager::deleteThreadListThreads() {
     for (int k = 0; k < threadDataList.size(); k++) {
         delete threadDataList[k]->myWorkflow;
         delete threadDataList[k];

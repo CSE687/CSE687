@@ -5,7 +5,7 @@
 The ThreadManager class abstracts all thread operations into a class. The constructor takes a pointer to a FileManager
 instance and a pointer to a vector containing all input files to be mapped. The executeMapThreads() method loops over
 this vector and spawns a map thread for each input file. The threads all operate on the executeMap() method of the
-Workflow class. Once each thread is spawned, the joinMapThreads() waits for each to complete before the deleteMapThreads()
+Workflow class. Once each thread is spawned, the joinThreadListThreads() waits for each to complete before the deleteThreadListThreads()
 method frees up all dynamically allocated memory.
 */
 
@@ -31,10 +31,10 @@ class ThreadManager {
     static void threadMap(void* arg);
 
     // Calls join() on each thread to wait for each to complete
-    void joinMapThreads();
+    void joinThreadListThreads();
 
     // Frees up any dynamically allcoated memory
-    void deleteMapThreads();
+    void deleteThreadListThreads();
 
     // Loops over input file vector, spawning a new Reduce thread for each file. Also
     // calls join on each thread and frees up all dynamic memory
@@ -45,12 +45,6 @@ class ThreadManager {
 
     // Each thread executes the Workflow::executeReduce method
     static void threadReduce(void* arg);
-
-    // Calls join() on each thread to wait for each to complete
-    void joinReduceThreads();
-
-    // Frees up any dynamically allcoated memory
-    void deleteReduceThreads();
 
     // Unique data for each thread
     struct threadData {
