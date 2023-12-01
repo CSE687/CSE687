@@ -5,6 +5,8 @@
 FileManager* fileManager = FileManager::GetInstance("tests/workdir/input", "tests/workdir/output", "tests/workdir/temp");
 
 BOOST_AUTO_TEST_CASE(TestMap_tokenize){
+
+    Map myMap = Map();
     std::vector<std::string> token;
     token.push_back("this");
     token.push_back("is");
@@ -16,7 +18,7 @@ BOOST_AUTO_TEST_CASE(TestMap_tokenize){
     token.push_back("working");
     token.push_back("okay");
 
-    BOOST_TEST(token == Map::tokenize("This is a test -- is the code wor-king okay?"));
+    BOOST_TEST(token == myMap.tokenize("This is a test -- is the code wor-king okay?"));
     BOOST_TEST(true);
 }
 

@@ -33,7 +33,7 @@ typedef vector<int> counts;
 class Workflow {
    private:
     FileManager* fileManager;  // The file manager for the workflow
-    vector<string> input_files;
+    // vector<string> input_files;
     vector<string> skippedFiles{};
 
    public:
@@ -49,6 +49,10 @@ class Workflow {
      *
      */
     void execute();
+
+    void executeMap(std::string, int);
+
+    // void reduceThread();
 };
 
 #endif  // WORKFLOW_H

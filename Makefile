@@ -13,7 +13,7 @@ build:
 	@ g++ -fPIC -o bin/map.o -c src/Map.cpp
 	@ g++ -shared -fPIC -o bin/libmap.so bin/map.o
 	@ g++ -shared -fPIC -o bin/libreduce.so bin/reduce.o
-	@ g++ -Lbin/ -Wl,-rpath=bin src/main.cpp src/FileManager.cpp src/Workflow.cpp -o bin/$(NAME) \
+	@ g++ -Lbin/ -Wl,-rpath=bin src/main.cpp src/FileManager.cpp src/Workflow.cpp src/threadManager.cpp -o bin/$(NAME) \
 	$(STD) $(BOOST) $(DLL)
 
 run: build
@@ -24,7 +24,7 @@ build-debug:
 	@ g++ -fPIC -o bin/map.o -c src/Map.cpp -ggdb
 	@ g++ -shared -fPIC -o bin/libmap.so bin/map.o -ggdb
 	@ g++ -shared -fPIC -o bin/libreduce.so bin/reduce.o -ggdb
-	@ g++ -Lbin/ -Wl,-rpath=bin src/main.cpp src/FileManager.cpp src/Workflow.cpp -ggdb -o bin/$(DEBUG_NAME) \
+	@ g++ -Lbin/ -Wl,-rpath=bin src/main.cpp src/FileManager.cpp src/Workflow.cpp src/threadManager.cpp -ggdb -o bin/$(DEBUG_NAME) \
 	$(STD) $(BOOST) $(DLL)
 
 debug: build-debug
@@ -93,6 +93,23 @@ build-workflow:
 test-workflow: build-workflow
 	@echo "\n*** TESTING WORKFLOW CLASS ***"
 	@ ./bin/testWorkflow
+
+## CLASS ThreadManager
+build-ThreadManager:
+	@ g++ \
+	src/FileManager.cpp \
+	src/Map.cpp \
+	src/Executor.hpp \
+	src/Reduce.cpp \
+	src/Workflow.cpp \
+	src/ThreadManager.cpp \
+	tests/testThreadManager.cpp \
+	$(STD) $(BOOST) \
+	-o bin/testThreadManager
+
+test-ThreadManager: build-ThreadManager
+	@echo "\n*** TESTING THREADMANAGER CLASS ***"
+	@ ./bin/testThreadManager
 
 # run all unit tests
 test: test-map test-reduce test-filmgr test-workflow
