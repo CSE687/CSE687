@@ -8,14 +8,9 @@
 using std::vector;
 
 #include <ctime>
-#include <map>
-#include <regex>
-#include <boost/thread/mutex.hpp>
 
 #include "Map.hpp"
 #include "Reduce.hpp"
-
-boost::mutex cout_mutex;
 
 using namespace std;
 
@@ -32,7 +27,6 @@ Workflow::Workflow(FileManager* filemgr) {
     fileManager = filemgr;
 }
 
-/*
 void Workflow::execute() {
     input_files = fileManager->getDirectoryFileList(fileManager->getInputDirectory());
 
@@ -45,13 +39,8 @@ void Workflow::execute() {
     }
     DEBUG_MSG(debugmsg);
 #endif
-
-    
-    
-
     // Maps all the files:
-    std::cout << "[+] Starting Mapper to parse input files..." << endl;
-
+    cout << "[+] Starting Mapper to parse input files..." << endl;
     Map mapper;
     for (string currfile : input_files) {
         vector<string> contents;
@@ -80,8 +69,7 @@ void Workflow::execute() {
     std::string message = execPtr->toString();
     cout << message << endl;
 
-
-    std::cout << "[+] Sorting and reducing tokens in intermediate files..." << endl;
+    cout << "[+] Sorting and reducing tokens in intermediate files..." << endl;
 
 #ifdef DEBUG
     time_t start_time;
@@ -107,39 +95,7 @@ void Workflow::execute() {
         DEBUG_MSG("File " + input_files[i] + " complete. (" + to_string(i + 1) + "/" + to_string(input_files.size()) + ") Time: " + to_string(end_time - start_time) + " sec");
 #endif
     }
-    std::cout << "[+] Completed sorting and reducing tokens." << endl;
-    std::cout << "[+] Workflow complete." << endl;
-}
 
-*/
-
-
-void Workflow::executeMap(std::string filename, int threadID){
-    Map mapper;
-    vector<string> contents;
-    try {
-        contents = fileManager->readFile(filename);
-    } catch (exception& e) {
-        cout_mutex.lock();
-        std::cout << "File '" << filename << "' could not be opened; skipping." << endl;
-        cout_mutex.unlock();
-        skippedFiles.push_back(filename);
-    }
-    if (contents.size() == 0) {
-        cout_mutex.lock();
-        std::cout << "File '" << filename << "' was empty; no mapping done." << endl;
-        cout_mutex.unlock();
-        skippedFiles.push_back(filename);
-    }
-    cout_mutex.lock();
-    std::cout << "Thread " << threadID << " is mapping file " << filename << std::endl;
-    cout_mutex.unlock();
-    int wordcount = 0;
-    for (string currline : contents) {
-        wordcount += mapper.map(fileManager->getFileStem(filename + ".txt"), currline);
-    }
-#ifdef DEBUG
-        DEBUG_MSG("Mapper tokenized " + to_string(wordcount) + " words from " + currfile);
-#endif
-        mapper.flushBuffer();
+    cout << "[+] Completed sorting and reducing tokens." << endl;
+    cout << "[+] Workflow complete." << endl;
 }

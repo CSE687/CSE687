@@ -16,8 +16,10 @@ tokenize() method to remove all punctuation, capitalization, and whitespace, and
 #include "Executor.hpp"
 #include "FileManager.hpp"
 
-class Map : public Executor {
-   public:
+class Map : public Executor{
+
+    public:
+
     // class constructor
     Map();
 
@@ -25,7 +27,7 @@ class Map : public Executor {
     int map(std::string, std::string);
 
     // returns a vector of strings, with each element being a new word
-    std::vector<std::string> tokenize(std::string);
+    static std::vector<std::string> tokenize(std::string);
 
     // buffers memory and writes to disk when buffer is full
     void exportData(std::string);
