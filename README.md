@@ -2,6 +2,8 @@
 
 Winter 2023 class project
 
+** The link to our demo video for Phase 3 is [here](https://zoom.us/rec/share/96nE1av1Y8jKv_emqxavAJyixQlyCP5MXH02kXmOoTpU20qP2mDwe3wuto7RtsNJ.b9EsYLQ3xEzsVtvx?startTime=1701641692000). **
+
 
 ## Project 1
 
