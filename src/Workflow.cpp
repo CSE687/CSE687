@@ -15,7 +15,7 @@ using std::vector;
 #include "Map.hpp"
 #include "Reduce.hpp"
 
-boost::mutex cout_mutex;
+boost::mutex workflow_cout_mutex;
 
 using namespace std;
 
@@ -38,20 +38,20 @@ void Workflow::executeMap(std::string filename, int threadID) {
     try {
         contents = fileManager->readFile(filename);
     } catch (exception& e) {
-        cout_mutex.lock();
+        workflow_cout_mutex.lock();
         std::cout << "File '" << filename << "' could not be opened; skipping." << endl;
-        cout_mutex.unlock();
+        workflow_cout_mutex.unlock();
         skippedFiles.push_back(filename);
     }
     if (contents.size() == 0) {
-        cout_mutex.lock();
+        workflow_cout_mutex.lock();
         std::cout << "File '" << filename << "' was empty; no mapping done." << endl;
-        cout_mutex.unlock();
+        workflow_cout_mutex.unlock();
         skippedFiles.push_back(filename);
     }
-    cout_mutex.lock();
+    workflow_cout_mutex.lock();
     std::cout << "Thread " << threadID << " is mapping file " << filename << std::endl;
-    cout_mutex.unlock();
+    workflow_cout_mutex.unlock();
     int wordcount = 0;
     for (string currline : contents) {
         wordcount += mapper.map(fileManager->getFileStem(filename + ".txt"), currline);
@@ -66,9 +66,9 @@ void Workflow::executeReduce(std::string filename, int threadID) {
     // Initialize Reducer with output file name
     Reduce reducer = Reduce(fileManager->getFileStem(filename + ".txt"));
 
-    cout_mutex.lock();
+    workflow_cout_mutex.lock();
     std::cout << "Thread " << threadID << " is reducing file " << filename << std::endl;
-    cout_mutex.unlock();
+    workflow_cout_mutex.unlock();
 
     reducer.execute(filename);
 }

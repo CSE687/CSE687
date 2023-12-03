@@ -60,8 +60,6 @@ class Reduce : public Executor {
      */
     int _sum_iterator(const std::vector<int> &values);
 
-    void setOutputFilename(std::string outputFilename);
-
     /**
      * @brief Prints the output filename.
      */

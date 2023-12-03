@@ -6,7 +6,7 @@
 #include <numeric>
 #include <regex>
 
-boost::mutex cout_mutex;
+boost::mutex reduce_cout_mutex;
 
 Reduce::Reduce(std::string outputFilename) {
     this->fileManager = FileManager::GetInstance();
