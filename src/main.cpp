@@ -1,4 +1,7 @@
 #include <boost/log/trivial.hpp>
+#include <boost/thread.hpp>
+
+#include "ThreadManager.hpp"
 #include "Workflow.hpp"
 
 using namespace std;
@@ -22,9 +25,19 @@ int main(int argc, char* argv[]) {
             help();
         }
 
-        Workflow workflow = Workflow(filemanager);
-        workflow.execute();
-    }
+        // Obtain vector of input files
+        vector<string> input_files = filemanager->getDirectoryFileList(filemanager->getInputDirectory());
 
+        // Initialize Thread Manager and launch map threads
+        ThreadManager mapThreadMang(filemanager, &input_files);
+        mapThreadMang.executeMapThreads();
+
+        // Obtain vector of input files
+        vector<string> temp_files = filemanager->getDirectoryFileList(filemanager->getTempDirectory());
+
+        // Initialize Thread Manager and launch map threads
+        ThreadManager reduceThreadMang(filemanager, &temp_files);
+        reduceThreadMang.executeReduceThreads();
+    }
     return 0;
 }
