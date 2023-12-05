@@ -180,3 +180,7 @@ Stub CLI Command
 ./bin/project-03 stub -p 9002
 ./bin/project-03 stub -p 9003
 ```
+
+- What to do if process dies
+  - Options:
+    - Just log it on controller after X missed heartbeats with stub

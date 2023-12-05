@@ -25,6 +25,16 @@ int main(int argc, char* argv[]) {
             help();
         }
 
+        // If argv[1] == "stub", start stub
+        // Start a listener on port <port>
+        // Stub stub ...
+
+        // Else if argv[1] == "controller", start controller
+        // Connect to stub ports listed as the last parameters in argv
+        // Iterate through list of files in input directory
+        // Round-Robin files to stubs
+        // Controller controller ...
+
         // Obtain vector of input files
         vector<string> input_files = filemanager->getDirectoryFileList(filemanager->getInputDirectory());
 
