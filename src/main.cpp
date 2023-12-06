@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
 
         // create client socket
         Stub stub1(9000);
-        if (!stub1.check_status()) {  // if status is 0, then we are clear to execute
+        if (!stub1.fail_status()) {  // if status is 0, then we are clear to execute
             stub1();
         }
 

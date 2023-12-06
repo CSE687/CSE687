@@ -48,6 +48,6 @@ Stub::~Stub() {
     close(this->client_socket);
 }
 
-int Stub::check_status() {
+int Stub::fail_status() {
     return this->status;
 }

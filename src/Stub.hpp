@@ -22,6 +22,6 @@ class Stub {
     Stub(int port_num);
     ~Stub();
     void operator()();
-    int check_status();
+    int fail_status();
 };
 #endif  // STUB_H
