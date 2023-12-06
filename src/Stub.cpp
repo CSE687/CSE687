@@ -13,7 +13,7 @@ Stub::Stub(int port) {
     this->port_num = port;
     this->client_socket = socket(AF_LOCAL, SOCK_STREAM, 0);
     if (this->client_socket < 0) {
-        printf("\n Socket creation error \n");
+        printf("[!] Socket creation error\n");
         this->status = -1;
         return;
     }
@@ -21,9 +21,9 @@ Stub::Stub(int port) {
     this->serv_addr.sin_port = htons(port_num);
     this->status = connect(this->client_socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
     if (this->status < 0) {
-        printf("\nConnection Failed\n");
+        printf("[!] Connection Failed\n");
     } else {
-        printf("\nConnected to server\n");
+        printf("Connected to server\n");
         // printf("\nConnect to server at port: %d\n" % this->port_num);
     }
 }
