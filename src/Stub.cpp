@@ -29,7 +29,7 @@ Stub::Stub(int port) {
 }
 
 void Stub::operator()() {
-    printf("Running stub.");
+    printf("Running stub.\n");
     // listen for message
     // int valread = read(client_fd, this->buffer, 1024 - 1);
 
@@ -41,6 +41,20 @@ void Stub::operator()() {
     // respond
     // char* msg = "Completed task";
     // send(this->client_fd, msg, strlen(msg), 0);
+
+    // Obtain vector of input files
+    vector<string> input_files = this->file_manager->getDirectoryFileList(this->file_manager->getInputDirectory());
+
+    // Initialize Thread Manager and launch map threads
+    ThreadManager mapThreadMang(this->file_manager, &input_files);
+    mapThreadMang.executeMapThreads();
+
+    // Obtain vector of input files
+    vector<string> temp_files = this->file_manager->getDirectoryFileList(this->file_manager->getTempDirectory());
+
+    // Initialize Thread Manager and launch map threads
+    ThreadManager reduceThreadMang(this->file_manager, &temp_files);
+    reduceThreadMang.executeReduceThreads();
 }
 
 Stub::~Stub() {
