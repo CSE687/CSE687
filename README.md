@@ -170,7 +170,7 @@ Due 2 weeks after Phase 3
 Controller CLI Command
 
 ```
-./bin/project-03 controller workdir/input workdir/output workdir/temp 9001 9002 9003
+./bin/project-03 controller 9000 workdir/input workdir/output workdir/temp 9001 9002 9003
 ```
 
 Stub CLI Command
@@ -184,3 +184,4 @@ Stub CLI Command
 - What to do if process dies
   - Options:
     - Just log it on controller after X missed heartbeats with stub
+    - Stub Status: Ded

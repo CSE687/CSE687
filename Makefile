@@ -1,4 +1,4 @@
-NAME=project-03
+NAME=project-04
 
 STD=-std=c++11
 BOOST=-DBOOST_LOG_DYN_LINK -lboost_log -lboost_log_setup -lboost_thread -lboost_system -lboost_filesystem
@@ -13,11 +13,15 @@ build:
 	@ g++ -fPIC -o bin/map.o -c src/Map.cpp
 	@ g++ -shared -fPIC -o bin/libmap.so bin/map.o
 	@ g++ -shared -fPIC -o bin/libreduce.so bin/reduce.o
-	@ g++ -Lbin/ -Wl,-rpath=bin src/main.cpp src/FileManager.cpp src/Workflow.cpp src/threadManager.cpp -o bin/$(NAME) \
+	@ g++ -Lbin/ -Wl,-rpath=bin src/main.cpp src/Controller.cpp src/Stub.cpp src/FileManager.cpp src/Workflow.cpp src/threadManager.cpp -o bin/$(NAME) \
 	$(STD) $(BOOST) $(DLL)
 
-run: build
-	@ ./bin/$(NAME) workdir/input workdir/output workdir/temp
+stub:
+	@ ./bin/$(NAME) stub 9001
+
+controller:
+	@ ./bin/$(NAME) controller 9000 workdir/input workdir/output workdir/temp 9001
+
 
 build-debug:
 	@ g++ -fPIC -o bin/reduce.o -c src/Reduce.cpp -ggdb
