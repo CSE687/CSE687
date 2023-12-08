@@ -2,6 +2,8 @@
 
 Winter 2023 class project
 
+** The link to our demo video for Phase 3 is [here](https://zoom.us/rec/share/96nE1av1Y8jKv_emqxavAJyixQlyCP5MXH02kXmOoTpU20qP2mDwe3wuto7RtsNJ.b9EsYLQ3xEzsVtvx?startTime=1701641692000). **
+
 
 ## Project 1
 
@@ -122,3 +124,73 @@ Due week after midterm
 ## Phase 4
 
 Due 2 weeks after Phase 3
+
+- 3 Stubs
+  - 1 stub does mapping
+  - 2 stubs for reduce
+- Run mapping on all files
+- Run reduce on all files
+- Message Format
+```
+{
+  task_id: int
+  task: str ["map", "reduce"]
+  input_file: str
+  output_directory: str
+}
+```
+
+1. Controller iterates through files in `input_directory`
+2. Controller creates Message Format for each file in `input_directory`
+3. Controller tracks messages sent to which stub
+4. Controller sends Message Format to specific stub
+5. Controller waits for Complete/Success message from Stub for specific `task_id`
+6. Controller sends next `task_id` for next task to stub
+
+- Controller Class
+  - Dev: Wes
+  - Needs to track state
+    - Files processed
+      - Tasks processed per file
+    - Tasks submitted to each stub
+    - Connected Stubs
+      - Last Heartbeat per Stub
+- Stub Class
+  - Dev: Chandler
+  - Stub has implementations of
+    - Map
+    - Reduce
+  - Listens for messags from Controller
+    - Launches new thread based on parameters received in message from Controller
+    - When the Thread finishes execution:
+      - send message back to Controller communicating Success
+  - Tracks state of connection with Controller
+    - Last Heartbeat time, etc
+
+Controller CLI Command
+
+```
+./bin/project-03 controller 9000 workdir/input workdir/output workdir/temp 9001 9002 9003
+```
+
+Stub CLI Command
+
+```
+./bin/project-03 stub -p 9001
+./bin/project-03 stub -p 9002
+./bin/project-03 stub -p 9003
+```
+
+- What to do if process dies
+  - Options:
+    - Just log it on controller after X missed heartbeats with stub
+    - Stub Status: Ded
+
+Implement a Controller class in c++. The controller needs to
+- read files from an input directory using the FileManager class
+- tell stub processes to run either Map or Reduce process on specific files
+- create socket connections to Stub processes which are listening on user-specified ports.
+- track which stub connections exist.
+  - send heartbeat messages to the stub connections.
+  - track when the last heartbeat message was sent to each stub
+  - trakc when the last heartbeat message was received from each stub
