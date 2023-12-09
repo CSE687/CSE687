@@ -36,7 +36,7 @@ void Workflow::executeMap(std::string filename, int threadID) {
     Map mapper;
     vector<string> contents;
     try {
-        contents = fileManager->readFile(fileManager->getInputDirectory(), filename);
+        contents = fileManager->readFile(filename);
     } catch (exception& e) {
         workflow_cout_mutex.lock();
         std::cout << "File '" << filename << "' could not be opened; skipping." << endl;
