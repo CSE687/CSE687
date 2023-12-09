@@ -3,17 +3,16 @@
 
 #include "ThreadManager.hpp"
 
-// void Stub::error(const char* msg) {
-//     perror(msg);
-//     exit(0);
-// }
+Stub::Stub(int port_num)
+    : acceptor(io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port_num)),
+      socket(io_service),
+      port_num(port_num) {
+}
 
-void Stub::startListening() {
+void Stub::operator()() {
+    cout << "Running Stub " << this->port_num << ".\n";
     acceptor.accept(socket);
     while (true) {
-        boost::array<char, 128> buf;
-        boost::system::error_code error;
-
         size_t len = socket.read_some(boost::asio::buffer(buf), error);
 
         if (error == boost::asio::error::eof)
@@ -24,6 +23,11 @@ void Stub::startListening() {
         std::string message(buf.data(), len);
         std::cout << "{Stub; Port: " << this->port_num << "}: Received message: " << message << std::endl;
 
+        if (message.find("FileManager:") != std::string::npos) {
+            setupFileManager(message);
+            startThreads(message);
+        }
+
         // Send acknowledge message back to the sender
         std::string acknowledgeMsg = "Ack Stub: " + std::to_string(this->port_num);
         boost::asio::write(socket, boost::asio::buffer(acknowledgeMsg));
@@ -32,67 +36,36 @@ void Stub::startListening() {
     }
 }
 
-Stub::Stub(int port_num)
-    : acceptor(io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port_num)),
-      socket(io_service),
-      port_num(port_num) {
-    this->file_manager = FileManager::GetInstance();
+void Stub::setupFileManager(std::string message) {
+    this->filemanager = nullptr;
+    try {
+        this->filemanager = FileManager::GetInstance("workdir/input", "workdir/output", "workdir/temp");
+    } catch (exception const& exc) {
+        cerr << "Could not start FileManager: " << exc.what() << endl;
+        exit(1);
+    }
 }
 
-// this->file_manager = FileManager::GetInstance();
-// this->port_num = port;
-// this->client_socket = socket(AF_LOCAL, SOCK_STREAM, 0);
-// if (this->client_socket < 0) {
-//     printf("[!] Socket creation error\n");
-//     this->status = -1;
-//     return;
-// }
-// this->serv_addr.sin_family = AF_LOCAL;
-// this->serv_addr.sin_port = htons(port_num);
-// this->status = connect(this->client_socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
-// if (this->status < 0) {
-//     printf("[!] Connection Failed\n");
-// } else {
-//     printf("Connected to server\n");
-//     // printf("\nConnect to server at port: %d\n" % this->port_num);
-// }
-// }
+void Stub::startThreads(std::string message) {
+    // TODO: get information from message rather than hardcoded.
+    std::vector<std::string> input_files = {
+        "All'sWellThatEndsWell.txt",
+        "AMidSummerNightsDream.txt",
+        "AsYouLikeIte.txt",
+        "Cymbeline.txt"};
 
-void Stub::operator()() {
-    printf("Running stub.\n");
-    startListening();
-    // listen for message
-    // int valread = read(client_fd, this->buffer, 1024 - 1);
+    // Initialize Thread Manager and launch map threads
+    ThreadManager mapThreadMang(&input_files);
+    mapThreadMang.executeMapThreads();
 
-    // run task
-    // vector<string> files = {"first_file", "second_file"};
-    // ThreadManager mapThreadMang(this->file_manager, &files);
-    // mapThreadMang.executeMapThreads();
-
-    // respond
-    // char* msg = "Completed task";
-    // send(this->client_fd, msg, strlen(msg), 0);
-
-    // Obtain vector of input files
-    // vector<string> input_files = this->file_manager->getDirectoryFileList(this->file_manager->getInputDirectory());
-
-    // // Initialize Thread Manager and launch map threads
-    // ThreadManager mapThreadMang(this->file_manager, &input_files);
-    // mapThreadMang.executeMapThreads();
-
-    // // Obtain vector of input files
-    // vector<string> temp_files = this->file_manager->getDirectoryFileList(this->file_manager->getTempDirectory());
-
-    // // Initialize Thread Manager and launch map threads
-    // ThreadManager reduceThreadMang(this->file_manager, &temp_files);
-    // reduceThreadMang.executeReduceThreads();
+    // Initialize Thread Manager and launch map threads
+    ThreadManager reduceThreadMang(&input_files);
+    reduceThreadMang.executeReduceThreads();
 }
 
 Stub::~Stub() {
-    printf("\nClosing client\n");
-    close(this->client_socket);
-}
-
-int Stub::fail_status() {
-    return this->status;
+    cout << "Closing Stub client " << this->port_num << ".\n";
+    socket.close(error);
+    if (error)
+        cout << "[!] ERROR: " << error;  // Some other error.
 }

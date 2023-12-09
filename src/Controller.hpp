@@ -34,16 +34,16 @@ class StubConnection {
    public:
     StubConnection(int stub_id, int port) : stub_id(stub_id), port(port), isAlive(false), destructionRequested(false), socket(io_context) {}
 
-    void start() {
+    void start(std::string input_directory, std::string output_directory, std::string temp_directory) {
         std::cout << "Start connection to stub " << this->stub_id << " on port " << this->port << std::endl;
         // Place the connection logic in a thread
-        std::thread connectionThread([this]() {
+        std::thread connectionThread([this, input_directory, output_directory, temp_directory]() {
             // Connect to the port and keep the connection alive
             while (true) {
                 if (!this->isAlive) {
                     // Attempt to reconnect to the stub
                     std::cout << "Attempting to establish connection to stub " << this->stub_id << " on port " << this->port << std::endl;
-                    establishConnection();
+                    establishConnection(input_directory, output_directory, temp_directory);
                 }
                 // Sleep for a certain duration before attempting to reconnect
                 std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -55,7 +55,7 @@ class StubConnection {
     }
 
    private:
-    void establishConnection() {
+    void establishConnection(std::string input_directory, std::string output_directory, std::string temp_directory) {
         // Attempt to connect to the stub
         boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::address::from_string("127.0.0.1"), this->port);
         boost::system::error_code error;
@@ -68,6 +68,10 @@ class StubConnection {
             std::cout << "Established connection to stub " << this->stub_id << " on port " << this->port << std::endl;
             std::cout << "Sending establishment message to stub " << this->stub_id << " on port " << this->port << std::endl;
             // cout_mutex_controller.unlock();
+
+            // send directory locations for threadmanager calls from stubs
+            std::string message = "FileManager:" + input_directory + "," + output_directory + "," + temp_directory;
+            boost::asio::write(socket, boost::asio::buffer(message));
 
             // Create a ptree object
             // boost::property_tree::ptree pt;
@@ -82,8 +86,8 @@ class StubConnection {
             // boost::asio::write(socket, boost::asio::buffer(jsonString));
 
             // Write a message othe socket
-            std::string message = "Hello from controller";
-            boost::asio::write(socket, boost::asio::buffer(message));
+            // std::string message = "Hello from controller";
+            // boost::asio::write(socket, boost::asio::buffer(message));
         } else {
             isAlive = false;
             // cout_mutex_controller.lock();
@@ -143,7 +147,7 @@ class Controller {
         // Create a new StubConnection object and add it to the stubConnections vector
         std::cout << "Creating connection to stub " << stub_id << " on port " << port << std::endl;
         stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port));
-        stubConnections.back()->start();
+        stubConnections.back()->start(this->fileManager->getInputDirectory(), this->fileManager->getOutputDirectory(), this->fileManager->getTempDirectory());
     }
 
     void sendHeartbeat(int port) {

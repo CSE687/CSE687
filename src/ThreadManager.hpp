@@ -18,7 +18,7 @@ method frees up all dynamically allocated memory.
 class ThreadManager {
    public:
     // class constructor
-    ThreadManager(FileManager*, vector<string>*);
+    ThreadManager(vector<string>*);
 
     // Loops over input file vector, spawning a new map thread for each file. Also
     // calls join on each thread and frees up all dynamic memory
