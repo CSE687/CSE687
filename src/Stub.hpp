@@ -9,6 +9,7 @@
 
 #include <boost/array.hpp>
 #include <boost/asio.hpp>
+#include <boost/thread.hpp>
 #include <iostream>
 
 #include "FileManager.hpp"
@@ -20,6 +21,8 @@ class Stub {
     boost::asio::io_service io_service;
     boost::asio::ip::tcp::acceptor acceptor;
     boost::asio::ip::tcp::socket socket;
+    boost::mutex process_running;
+    boost::thread* threads[2] = {};
 
     boost::system::error_code error;
     boost::array<char, 128> buf;
@@ -28,6 +31,9 @@ class Stub {
 
    public:
     FileManager* filemanager;
+    void listen();
+    void terminateThreads();
+    void joinThreads();
     Stub(int port_num);
     ~Stub();
     void operator()();

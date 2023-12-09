@@ -73,6 +73,12 @@ class StubConnection {
             std::string message = "FileManager:" + input_directory + "," + output_directory + "," + temp_directory;
             boost::asio::write(socket, boost::asio::buffer(message));
 
+            for (int i = 0; i < 5; i++) {
+                sleep(5);
+                std::string message = "Sending heartbeat";
+                boost::asio::write(socket, boost::asio::buffer(message));
+            }
+
             // Create a ptree object
             // boost::property_tree::ptree pt;
             // pt.put("message", "hello");
