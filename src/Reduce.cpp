@@ -35,7 +35,7 @@ void Reduce::execute(const std::string &input_file) {
     // Write SUCCESS file to output directory
     this->fileManager->writeFile(fileManager->getOutputDirectory(), this->outputFilename + "-SUCCESS", "");
     // remove temp directory
-    // fileManager->remove(input_file);
+    fileManager->remove(input_file);
 }
 
 void Reduce::exportResult(const std::string &key, int value) {
