@@ -50,6 +50,7 @@ class Stub {
             std::stringstream ss_ack;
             boost::property_tree::write_json(ss_ack, ack);
             std::string ack_string = ss_ack.str();
+            ack_string += "\n";
             boost::asio::write(socket, boost::asio::buffer(ack_string));
 
             std::cout << "Sent message: ";

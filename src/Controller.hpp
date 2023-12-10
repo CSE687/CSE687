@@ -52,11 +52,11 @@ class CircularPropertyTreeBuffer {
 
 // Struct tracks the last heartbeat sent and received from a stub
 struct StubHeartbeat {
-    std::chrono::system_clock::time_point lastMessageSent;
-    std::chrono::system_clock::time_point lastMessageReceived;
+    std::chrono::system_clock::time_point timeLastMessageSent;
+    std::chrono::system_clock::time_point timeLastMessageReceived;
 
     // Track allowed time between heartbeats
-    std::chrono::duration<double> secondsBetweenHeartbeats;
+    std::chrono::duration<double> heartbeatCadenceSeconds;
 };
 
 class StubConnection {
@@ -80,40 +80,42 @@ class StubConnection {
 
     // receive message from stub
     void receiveMessage() {
-        boost::array<char, 128> buf;
+        boost::asio::streambuf buf;
         boost::system::error_code error;
 
-        size_t len = socket.read_some(boost::asio::buffer(buf), error);
+        boost::asio::async_read_until(socket, buf, "\n", [&](const boost::system::error_code& error, size_t bytes_transferred) {
+            if (error == boost::asio::error::eof) {
+                std::lock_guard<std::mutex> lock(cout_mutex);
+                std::cout << "Connection to stub " << this->stub_id << " on port " << this->port << " closed cleanly by peer" << std::endl;
+                return;
+            } else if (error) {
+                throw boost::system::system_error(error);  // Some other error.
+            }
 
-        if (error == boost::asio::error::eof) {
-            // this->isAlive = false;  // Connection closed cleanly by peer.
-            // this->socket.close();
-            std::lock_guard<std::mutex> lock(cout_mutex);
-            std::cout << "Connection to stub " << this->stub_id << " on port " << this->port << " closed cleanly by peer" << std::endl;
-            return;
-        } else if (error) {
-            throw boost::system::system_error(error);  // Some other error.
-        }
+            std::istream is(&buf);
+            std::string message;
+            std::getline(is, message);
 
-        std::string message(buf.data(), len);
-        // parse message into ptree
-        std::stringstream ss;
-        ss << message;
-        boost::property_tree::ptree pt;
-        boost::property_tree::read_json(ss, pt);
-        // place ptree in receiveBuffer, unless message_type = "heartbeat" or "ack"
-        if (pt.get<std::string>("message_type") != "heartbeat" && pt.get<std::string>("message_type") != "ack") {
-            this->receiveBuffer.push(pt);
-            // print ptree
-            std::cout << "Placed message from Stub " << this->stub_id << "on port in receiveBuffer" << this->port << ": ";
-            boost::property_tree::write_json(std::cout, pt);
-        } else {
-            std::cout << "Received message from Stub " << this->stub_id << " on port " << this->port << ": ";
-            boost::property_tree::write_json(std::cout, pt);
-        }
+            // parse message into ptree
+            std::stringstream ss;
+            ss << message;
+            boost::property_tree::ptree pt;
+            boost::property_tree::read_json(ss, pt);
 
-        // Update the last message received time
-        this->heartbeat.lastMessageReceived = std::chrono::system_clock::now();
+            // place ptree in receiveBuffer, unless message_type = "heartbeat" or "ack"
+            if (pt.get<std::string>("message_type") != "heartbeat" && pt.get<std::string>("message_type") != "ack") {
+                this->receiveBuffer.push(pt);
+                // print ptree
+                std::cout << "Placed message from Stub " << this->stub_id << " on port " << this->port << " in receiveBuffer: ";
+                boost::property_tree::write_json(std::cout, pt);
+            } else {
+                std::cout << "Received message from Stub " << this->stub_id << " on port " << this->port << ": ";
+                boost::property_tree::write_json(std::cout, pt);
+            }
+
+            // Update the last message received time
+            this->heartbeat.timeLastMessageReceived = std::chrono::system_clock::now();
+        });
     }
 
     // send a heartbeat if the time since the last heartbeat sent exceeds the allowed time between heartbeats
@@ -121,9 +123,9 @@ class StubConnection {
         auto _timeSinceLastHeartbeatReceived = this->timeSinceLastHeartbeatReceived();
         cout_mutex.lock();
         std::cout << "Time since last heartbeat sent: " << _timeSinceLastHeartbeatReceived.count() << std::endl;
-        std::cout << "Allowed time between heartbeats: " << this->heartbeat.secondsBetweenHeartbeats.count() << std::endl;
+        std::cout << "Allowed time between heartbeats: " << this->heartbeat.heartbeatCadenceSeconds.count() << std::endl;
         cout_mutex.unlock();
-        if (_timeSinceLastHeartbeatReceived > this->heartbeat.secondsBetweenHeartbeats) {
+        if (_timeSinceLastHeartbeatReceived > this->heartbeat.heartbeatCadenceSeconds) {
             cout_mutex.lock();
             std::cout << "Sending heartbeat to stub " << this->stub_id << " on port " << this->port << std::endl;
             cout_mutex.unlock();
@@ -140,19 +142,19 @@ class StubConnection {
     StubConnection(int stub_id,
                    int port,
                    std::mutex& cout_mutex,
-                   int secondsBetweenHeartbeats) : stub_id(stub_id),
-                                                   port(port),
-                                                   isAlive(false),
-                                                   destructionRequested(false),
-                                                   socket(io_context),
-                                                   cout_mutex(cout_mutex),
-                                                   receiveBuffer(cout_mutex),
-                                                   sendBuffer(cout_mutex) {
+                   int heartbeatCadenceSeconds) : stub_id(stub_id),
+                                                  port(port),
+                                                  isAlive(false),
+                                                  destructionRequested(false),
+                                                  socket(io_context),
+                                                  cout_mutex(cout_mutex),
+                                                  receiveBuffer(cout_mutex),
+                                                  sendBuffer(cout_mutex) {
         // Initialize StubHeartbeat struct
-        this->heartbeat.lastMessageSent = std::chrono::system_clock::now();
-        this->heartbeat.lastMessageReceived = std::chrono::system_clock::now();
+        this->heartbeat.timeLastMessageSent = std::chrono::system_clock::now();
+        this->heartbeat.timeLastMessageReceived = std::chrono::system_clock::now();
         // Set the allowed time between heartbeats to 5 seconds
-        this->heartbeat.secondsBetweenHeartbeats = std::chrono::seconds(secondsBetweenHeartbeats);
+        this->heartbeat.heartbeatCadenceSeconds = std::chrono::seconds(heartbeatCadenceSeconds);
     }
 
     void start() {
@@ -201,23 +203,24 @@ class StubConnection {
         std::ostringstream buf;
         boost::property_tree::write_json(buf, pt, false);
         std::string jsonString = buf.str();
+        jsonString += "\n";
 
         // Send the JSON string to the stub
         boost::asio::write(socket, boost::asio::buffer(jsonString));
 
         // Update the last message sent time
-        this->heartbeat.lastMessageSent = std::chrono::system_clock::now();
+        this->heartbeat.timeLastMessageSent = std::chrono::system_clock::now();
     }
 
    private:
     // calculate the time since the last heartbeat was sent
     std::chrono::duration<double> timeSinceLastHeartbeatSent() {
-        return std::chrono::system_clock::now() - this->heartbeat.lastMessageSent;
+        return std::chrono::system_clock::now() - this->heartbeat.timeLastMessageSent;
     }
 
     // calculate the time since the last heartbeat was received
     std::chrono::duration<double> timeSinceLastHeartbeatReceived() {
-        return std::chrono::system_clock::now() - this->heartbeat.lastMessageReceived;
+        return std::chrono::system_clock::now() - this->heartbeat.timeLastMessageReceived;
     }
 
     // Establish a connection to the stub
