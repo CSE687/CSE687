@@ -17,10 +17,10 @@ build:
 	$(STD) $(BOOST) $(DLL)
 
 stub:
-	@ ./bin/$(NAME) stub 9001
+	@ ./bin/$(NAME) stub $(PORT)
 
 controller:
-	@ ./bin/$(NAME) controller 9000 workdir/input workdir/output workdir/temp 9001
+	@ ./bin/$(NAME) controller $(PORT) workdir/input workdir/output workdir/temp 9001 9002
 
 
 build-debug:

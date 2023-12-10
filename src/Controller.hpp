@@ -1,6 +1,7 @@
 #ifndef CONTROLLER_HPP
 #define CONTROLLER_HPP
 
+#include <boost/array.hpp>
 #include <boost/asio.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -17,10 +18,10 @@ class CircularPropertyTreeBuffer {
     std::vector<boost::property_tree::ptree> buffer;
     size_t currentIndex;
     bool hasMessage;
-    std::mutex* cout_mutex;
+    std::mutex& cout_mutex;
 
    public:
-    CircularPropertyTreeBuffer(std::mutex& cout_mutex_controller) : currentIndex(0), hasMessage(false) {}
+    CircularPropertyTreeBuffer(std::mutex& cout_mutex) : currentIndex(0), hasMessage(false), cout_mutex(cout_mutex) {}
 
     void push(const boost::property_tree::ptree& message) {
         buffer.push_back(message);
@@ -30,9 +31,9 @@ class CircularPropertyTreeBuffer {
 
     boost::property_tree::ptree pop() {
         if (!hasMessage) {
-            (*cout_mutex).lock();
+            cout_mutex.lock();
             std::cerr << "Warning: Tried to retrieve message from CircularBuffer but no message exists" << std::endl;
-            (*cout_mutex).unlock();
+            cout_mutex.unlock();
         }
         boost::property_tree::ptree message = buffer[currentIndex];
         buffer.erase(buffer.begin() + currentIndex);
@@ -62,12 +63,66 @@ class StubConnection {
     StubHeartbeat heartbeat;
     bool isAlive;
     bool destructionRequested;
+
     boost::asio::io_context io_context;
     boost::asio::ip::tcp::socket socket;
-    std::mutex* cout_mutex_controller;
+
+    // circular buffer for property_tree
+    CircularPropertyTreeBuffer receiveBuffer;
+    CircularPropertyTreeBuffer sendBuffer;
+
+    std::mutex& cout_mutex;
+
+    // receive message from stub
+    void receiveMessage() {
+        boost::array<char, 128> buf;
+        boost::system::error_code error;
+
+        size_t len = socket.read_some(boost::asio::buffer(buf), error);
+
+        if (error == boost::asio::error::eof) {
+            this->isAlive = false;  // Connection closed cleanly by peer.
+            std::lock_guard<std::mutex> lock(cout_mutex);
+            std::cout << "Connection to stub " << this->stub_id << " on port " << this->port << " closed cleanly by peer" << std::endl;
+            return;
+        } else if (error) {
+            throw boost::system::system_error(error);  // Some other error.
+        }
+
+        std::string message(buf.data(), len);
+        // parse message into ptree
+        std::stringstream ss;
+        ss << message;
+        boost::property_tree::ptree pt;
+        boost::property_tree::read_json(ss, pt);
+        // place ptree in receiveBuffer
+        receiveBuffer.push(pt);
+
+        // print ptree
+        std::cout << "Placed in receiveBuffer: ";
+        boost::property_tree::write_json(std::cout, pt);
+
+        // // send ack ptree back to sender
+        // boost::property_tree::ptree ack;
+        // ack.put("ack", "ack");
+        // std::stringstream ss_ack;
+        // boost::property_tree::write_json(ss_ack, ack);
+        // std::string ack_string = ss_ack.str();
+        // boost::asio::write(socket, boost::asio::buffer(ack_string));
+
+        // std::cout << "Sent message: ";
+        // std::cout << ack_string << std::endl;
+    }
 
    public:
-    StubConnection(int stub_id, int port, std::mutex& cout_mutex_controller) : stub_id(stub_id), port(port), isAlive(false), destructionRequested(false), socket(io_context), cout_mutex_controller(&cout_mutex_controller) {}
+    StubConnection(int stub_id, int port, std::mutex& cout_mutex) : stub_id(stub_id),
+                                                                    port(port),
+                                                                    isAlive(false),
+                                                                    destructionRequested(false),
+                                                                    socket(io_context),
+                                                                    cout_mutex(cout_mutex),
+                                                                    receiveBuffer(cout_mutex),
+                                                                    sendBuffer(cout_mutex) {}
 
     void start() {
         std::cout << "Start connection to stub " << this->stub_id << " on port " << this->port << std::endl;
@@ -79,14 +134,42 @@ class StubConnection {
                     // Attempt to reconnect to the stub
                     std::cout << "Attempting to establish connection to stub " << this->stub_id << " on port " << this->port << std::endl;
                     establishConnection();
+                    if (!this->isAlive) {
+                        // Sleep for a certain duration before attempting to reconnect
+                        std::this_thread::sleep_for(std::chrono::seconds(1));
+
+                        // Skip the rest of the loop and continue to the next iteration
+                        continue;
+                    }
                 }
-                // Sleep for a certain duration before attempting to reconnect
-                std::this_thread::sleep_for(std::chrono::seconds(1));
+
+                // Load the receiveBuffer with messages from the stub
+                this->receiveMessage();
+
+                // Send messages from the sendBuffer to the stub
+                if (this->sendBuffer.getHasMessage()) {
+                    boost::property_tree::ptree message = this->sendBuffer.pop();
+                    this->sendMessage(message);
+                }
             }
         });
 
         // Detach the thread to allow it to run independently
         connectionThread.detach();
+    };
+
+    // Send a message to the stub
+    void sendMessage(const boost::property_tree::ptree pt) {
+        // Convert the ptree to a JSON string
+        std::ostringstream buf;
+        boost::property_tree::write_json(buf, pt, false);
+        std::string jsonString = buf.str();
+
+        // Send the JSON string to the stub
+        boost::asio::write(socket, boost::asio::buffer(jsonString));
+
+        // Update the last message sent time
+        this->heartbeat.lastMessageSent = std::chrono::system_clock::now();
     }
 
    private:
@@ -104,32 +187,23 @@ class StubConnection {
         socket.connect(endpoint, error);
 
         if (!error) {
-            isAlive = true;
-            (*cout_mutex_controller).lock();
+            cout_mutex.lock();
             std::cout << "Established connection to stub " << this->stub_id << " on port " << this->port << std::endl;
             std::cout << "Sending establishment message to stub " << this->stub_id << " on port " << this->port << std::endl;
-            (*cout_mutex_controller).unlock();
+            cout_mutex.unlock();
 
             // Create a ptree object
-            // boost::property_tree::ptree pt;
-            // pt.put("message", "hello");
+            boost::property_tree::ptree pt;
+            pt.put("message_type", "establish_connection");
+            pt.put("message", "Establish connection to stub");
 
-            // // Convert the ptree to a JSON string
-            // std::ostringstream buf;
-            // boost::property_tree::write_json(buf, pt, false);
-            // std::string jsonString = buf.str();
-
-            // // Send the JSON string to the stub
-            // boost::asio::write(socket, boost::asio::buffer(jsonString));
-
-            // Write a message othe socket
-            std::string message = "Hello from controller";
-            boost::asio::write(socket, boost::asio::buffer(message));
+            this->sendMessage(pt);
+            isAlive = true;
         } else {
             isAlive = false;
-            (*cout_mutex_controller).lock();
+            cout_mutex.lock();
             std::cout << "Failed to establish connection to stub " << this->stub_id << " on port " << this->port << std::endl;
-            (*cout_mutex_controller).unlock();
+            cout_mutex.unlock();
         }
     }
 };
@@ -162,7 +236,7 @@ class Controller {
     FileManager* fileManager;
     int port;
     std::vector<std::shared_ptr<StubConnection>> stubConnections;
-    std::mutex cout_mutex_controller;
+    std::mutex cout_mutex;
 
    public:
     Controller(FileManager* fileManager, int port, std::vector<int>& ports) : fileManager(fileManager), port(port) {
@@ -184,7 +258,7 @@ class Controller {
     void createStubConnection(int stub_id, int port) {
         // Create a new StubConnection object and add it to the stubConnections vector
         std::cout << "Creating connection to stub " << stub_id << " on port " << port << std::endl;
-        stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port, this->cout_mutex_controller));
+        stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port, this->cout_mutex));
         stubConnections.back()->start();
     }
 
