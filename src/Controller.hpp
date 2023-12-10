@@ -12,9 +12,6 @@
 
 #include "FileManager.hpp"
 
-// cout mutex
-// std::mutex cout_mutex_controller;
-
 // Struct tracks the last heartbeat sent and received from a stub
 struct StubHeartbeat {
     std::chrono::system_clock::time_point lastMessageSent;
@@ -30,9 +27,10 @@ class StubConnection {
     bool destructionRequested;
     boost::asio::io_context io_context;
     boost::asio::ip::tcp::socket socket;
+    std::mutex* cout_mutex_controller;
 
    public:
-    StubConnection(int stub_id, int port) : stub_id(stub_id), port(port), isAlive(false), destructionRequested(false), socket(io_context) {}
+    StubConnection(int stub_id, int port, std::mutex& cout_mutex_controller) : stub_id(stub_id), port(port), isAlive(false), destructionRequested(false), socket(io_context), cout_mutex_controller(&cout_mutex_controller) {}
 
     void start() {
         std::cout << "Start connection to stub " << this->stub_id << " on port " << this->port << std::endl;
@@ -64,10 +62,10 @@ class StubConnection {
 
         if (!error) {
             isAlive = true;
-            // cout_mutex_controller.lock();
+            (*cout_mutex_controller).lock();
             std::cout << "Established connection to stub " << this->stub_id << " on port " << this->port << std::endl;
             std::cout << "Sending establishment message to stub " << this->stub_id << " on port " << this->port << std::endl;
-            // cout_mutex_controller.unlock();
+            (*cout_mutex_controller).unlock();
 
             // Create a ptree object
             // boost::property_tree::ptree pt;
@@ -86,9 +84,9 @@ class StubConnection {
             boost::asio::write(socket, boost::asio::buffer(message));
         } else {
             isAlive = false;
-            // cout_mutex_controller.lock();
+            (*cout_mutex_controller).lock();
             std::cout << "Failed to establish connection to stub " << this->stub_id << " on port " << this->port << std::endl;
-            // cout_mutex_controller.unlock();
+            (*cout_mutex_controller).unlock();
         }
     }
 };
@@ -121,6 +119,7 @@ class Controller {
     FileManager* fileManager;
     int port;
     std::vector<std::shared_ptr<StubConnection>> stubConnections;
+    std::mutex cout_mutex_controller;
 
    public:
     Controller(FileManager* fileManager, int port, std::vector<int>& ports) : fileManager(fileManager), port(port) {
@@ -142,7 +141,7 @@ class Controller {
     void createStubConnection(int stub_id, int port) {
         // Create a new StubConnection object and add it to the stubConnections vector
         std::cout << "Creating connection to stub " << stub_id << " on port " << port << std::endl;
-        stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port));
+        stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port, this->cout_mutex_controller));
         stubConnections.back()->start();
     }
 
