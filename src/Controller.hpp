@@ -12,6 +12,43 @@
 
 #include "FileManager.hpp"
 
+class CircularPropertyTreeBuffer {
+   private:
+    std::vector<boost::property_tree::ptree> buffer;
+    size_t currentIndex;
+    bool hasMessage;
+    std::mutex* cout_mutex;
+
+   public:
+    CircularPropertyTreeBuffer(std::mutex& cout_mutex_controller) : currentIndex(0), hasMessage(false) {}
+
+    void push(const boost::property_tree::ptree& message) {
+        buffer.push_back(message);
+        currentIndex = buffer.size() - 1;
+        hasMessage = true;
+    }
+
+    boost::property_tree::ptree pop() {
+        if (!hasMessage) {
+            (*cout_mutex).lock();
+            std::cerr << "Warning: Tried to retrieve message from CircularBuffer but no message exists" << std::endl;
+            (*cout_mutex).unlock();
+        }
+        boost::property_tree::ptree message = buffer[currentIndex];
+        buffer.erase(buffer.begin() + currentIndex);
+        if (buffer.empty()) {
+            hasMessage = false;
+        } else {
+            currentIndex = currentIndex % buffer.size();
+        }
+        return message;
+    }
+
+    bool getHasMessage() const {
+        return hasMessage;
+    }
+};
+
 // Struct tracks the last heartbeat sent and received from a stub
 struct StubHeartbeat {
     std::chrono::system_clock::time_point lastMessageSent;
@@ -53,6 +90,12 @@ class StubConnection {
     }
 
    private:
+    // calculate the time since the last heartbeat was sent
+    std::chrono::duration<double> timeSinceLastHeartbeatSent() {
+        return std::chrono::system_clock::now() - this->heartbeat.lastMessageSent;
+    }
+
+    // Establish a connection to the stub
     void establishConnection() {
         // Attempt to connect to the stub
         boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::address::from_string("127.0.0.1"), this->port);
