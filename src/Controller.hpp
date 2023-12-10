@@ -54,12 +54,17 @@ class CircularPropertyTreeBuffer {
 struct StubHeartbeat {
     std::chrono::system_clock::time_point lastMessageSent;
     std::chrono::system_clock::time_point lastMessageReceived;
+
+    // Track allowed time between heartbeats
+    std::chrono::duration<double> secondsBetweenHeartbeats;
 };
 
 class StubConnection {
    private:
     int stub_id;
     int port;
+
+    // Heartbeat struct to track the last heartbeat sent and received from the stub
     StubHeartbeat heartbeat;
     bool isAlive;
     bool destructionRequested;
@@ -81,7 +86,8 @@ class StubConnection {
         size_t len = socket.read_some(boost::asio::buffer(buf), error);
 
         if (error == boost::asio::error::eof) {
-            this->isAlive = false;  // Connection closed cleanly by peer.
+            // this->isAlive = false;  // Connection closed cleanly by peer.
+            // this->socket.close();
             std::lock_guard<std::mutex> lock(cout_mutex);
             std::cout << "Connection to stub " << this->stub_id << " on port " << this->port << " closed cleanly by peer" << std::endl;
             return;
@@ -95,34 +101,59 @@ class StubConnection {
         ss << message;
         boost::property_tree::ptree pt;
         boost::property_tree::read_json(ss, pt);
-        // place ptree in receiveBuffer
-        receiveBuffer.push(pt);
+        // place ptree in receiveBuffer, unless message_type = "heartbeat" or "ack"
+        if (pt.get<std::string>("message_type") != "heartbeat" && pt.get<std::string>("message_type") != "ack") {
+            this->receiveBuffer.push(pt);
+            // print ptree
+            std::cout << "Placed message from Stub " << this->stub_id << "on port in receiveBuffer" << this->port << ": ";
+            boost::property_tree::write_json(std::cout, pt);
+        } else {
+            std::cout << "Received message from Stub " << this->stub_id << " on port " << this->port << ": ";
+            boost::property_tree::write_json(std::cout, pt);
+        }
 
-        // print ptree
-        std::cout << "Placed in receiveBuffer: ";
-        boost::property_tree::write_json(std::cout, pt);
+        // Update the last message received time
+        this->heartbeat.lastMessageReceived = std::chrono::system_clock::now();
+    }
 
-        // // send ack ptree back to sender
-        // boost::property_tree::ptree ack;
-        // ack.put("ack", "ack");
-        // std::stringstream ss_ack;
-        // boost::property_tree::write_json(ss_ack, ack);
-        // std::string ack_string = ss_ack.str();
-        // boost::asio::write(socket, boost::asio::buffer(ack_string));
+    // send a heartbeat if the time since the last heartbeat sent exceeds the allowed time between heartbeats
+    void sendHeartbeat() {
+        auto _timeSinceLastHeartbeatReceived = this->timeSinceLastHeartbeatReceived();
+        cout_mutex.lock();
+        std::cout << "Time since last heartbeat sent: " << _timeSinceLastHeartbeatReceived.count() << std::endl;
+        std::cout << "Allowed time between heartbeats: " << this->heartbeat.secondsBetweenHeartbeats.count() << std::endl;
+        cout_mutex.unlock();
+        if (_timeSinceLastHeartbeatReceived > this->heartbeat.secondsBetweenHeartbeats) {
+            cout_mutex.lock();
+            std::cout << "Sending heartbeat to stub " << this->stub_id << " on port " << this->port << std::endl;
+            cout_mutex.unlock();
+            // Create a ptree object
+            boost::property_tree::ptree pt;
+            pt.put("message_type", "heartbeat");
+            pt.put("message", "heartbeat");
 
-        // std::cout << "Sent message: ";
-        // std::cout << ack_string << std::endl;
+            this->sendMessage(pt);
+        }
     }
 
    public:
-    StubConnection(int stub_id, int port, std::mutex& cout_mutex) : stub_id(stub_id),
-                                                                    port(port),
-                                                                    isAlive(false),
-                                                                    destructionRequested(false),
-                                                                    socket(io_context),
-                                                                    cout_mutex(cout_mutex),
-                                                                    receiveBuffer(cout_mutex),
-                                                                    sendBuffer(cout_mutex) {}
+    StubConnection(int stub_id,
+                   int port,
+                   std::mutex& cout_mutex,
+                   int secondsBetweenHeartbeats) : stub_id(stub_id),
+                                                   port(port),
+                                                   isAlive(false),
+                                                   destructionRequested(false),
+                                                   socket(io_context),
+                                                   cout_mutex(cout_mutex),
+                                                   receiveBuffer(cout_mutex),
+                                                   sendBuffer(cout_mutex) {
+        // Initialize StubHeartbeat struct
+        this->heartbeat.lastMessageSent = std::chrono::system_clock::now();
+        this->heartbeat.lastMessageReceived = std::chrono::system_clock::now();
+        // Set the allowed time between heartbeats to 5 seconds
+        this->heartbeat.secondsBetweenHeartbeats = std::chrono::seconds(secondsBetweenHeartbeats);
+    }
 
     void start() {
         std::cout << "Start connection to stub " << this->stub_id << " on port " << this->port << std::endl;
@@ -132,13 +163,16 @@ class StubConnection {
             while (true) {
                 if (!this->isAlive) {
                     // Attempt to reconnect to the stub
+                    this->cout_mutex.lock();
                     std::cout << "Attempting to establish connection to stub " << this->stub_id << " on port " << this->port << std::endl;
+                    this->cout_mutex.unlock();
                     establishConnection();
+
                     if (!this->isAlive) {
                         // Sleep for a certain duration before attempting to reconnect
                         std::this_thread::sleep_for(std::chrono::seconds(1));
 
-                        // Skip the rest of the loop and continue to the next iteration
+                        // The rest of the loop is comms - if the connection is not alive, we don't want to continue
                         continue;
                     }
                 }
@@ -151,6 +185,9 @@ class StubConnection {
                     boost::property_tree::ptree message = this->sendBuffer.pop();
                     this->sendMessage(message);
                 }
+
+                // Send a heartbeat if the time since the last heartbeat sent exceeds the allowed time between heartbeats
+                this->sendHeartbeat();
             }
         });
 
@@ -178,6 +215,11 @@ class StubConnection {
         return std::chrono::system_clock::now() - this->heartbeat.lastMessageSent;
     }
 
+    // calculate the time since the last heartbeat was received
+    std::chrono::duration<double> timeSinceLastHeartbeatReceived() {
+        return std::chrono::system_clock::now() - this->heartbeat.lastMessageReceived;
+    }
+
     // Establish a connection to the stub
     void establishConnection() {
         // Attempt to connect to the stub
@@ -203,6 +245,7 @@ class StubConnection {
             isAlive = false;
             cout_mutex.lock();
             std::cout << "Failed to establish connection to stub " << this->stub_id << " on port " << this->port << std::endl;
+            std::cout << "Error: " << error.message() << std::endl;
             cout_mutex.unlock();
         }
     }
@@ -258,17 +301,8 @@ class Controller {
     void createStubConnection(int stub_id, int port) {
         // Create a new StubConnection object and add it to the stubConnections vector
         std::cout << "Creating connection to stub " << stub_id << " on port " << port << std::endl;
-        stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port, this->cout_mutex));
+        stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port, this->cout_mutex, 5));
         stubConnections.back()->start();
-    }
-
-    void sendHeartbeat(int port) {
-        // Send heartbeat message to the stub connection
-        // Update stubsLastHeartbeatSent
-    }
-
-    void receiveHeartbeat(int port) {
-        // Update stubsLastHeartbeatReceived when a heartbeat message is received from a stub
     }
 
     void execute() {

@@ -46,7 +46,7 @@ class Stub {
 
             // send ack ptree back to sender
             boost::property_tree::ptree ack;
-            ack.put("ack", "ack");
+            ack.put("message_type", "ack");
             std::stringstream ss_ack;
             boost::property_tree::write_json(ss_ack, ack);
             std::string ack_string = ss_ack.str();
