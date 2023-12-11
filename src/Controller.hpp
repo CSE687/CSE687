@@ -18,42 +18,48 @@ class CircularPropertyTreeBuffer {
     int stub_id;
     std::vector<boost::property_tree::ptree> buffer;
     size_t currentIndex;
-    bool hasMessage;
+    bool _hasMessage;
     std::mutex& cout_mutex;
 
     // thread-safe console writing
     void writeConsole(std::ostream& outputStream, const std::string& message) {
         std::lock_guard<std::mutex> lock(this->cout_mutex);
-        std::string messagePrefix = "Stub ID: " + std::to_string(this->stub_id) + "; CircularPropertyTreeBuffer: ";
-        outputStream << message;
+        std::string messageWithPrefix = "Stub ID: " + std::to_string(this->stub_id) + "; CircularPropertyTreeBuffer: ";
+        outputStream << messageWithPrefix << message;
         outputStream.flush();
     };
 
    public:
-    CircularPropertyTreeBuffer(std::mutex& cout_mutex, int stub_id) : currentIndex(0), hasMessage(false), cout_mutex(cout_mutex), stub_id(stub_id) {}
+    std::mutex bufferMutex;
+
+    CircularPropertyTreeBuffer(std::mutex& cout_mutex, int stub_id) : currentIndex(0), _hasMessage(false), cout_mutex(cout_mutex), stub_id(stub_id) {}
 
     void push(const boost::property_tree::ptree& message) {
+        this->writeConsole(std::cout, "Pushing message to CircularBuffer\n");
         buffer.push_back(message);
         currentIndex = buffer.size() - 1;
-        hasMessage = true;
+        _hasMessage = true;
     }
 
     boost::property_tree::ptree pop() {
-        if (!hasMessage) {
-            this->writeConsole(std::cerr, "Warning: Tried to retrieve message from CircularBuffer but no message exists\n");
+        if (!_hasMessage) {
+            this->writeConsole(std::cout, "Warning: Tried to retrieve message from CircularBuffer but no message exists\n");
         }
+
+        this->writeConsole(std::cout, "Retrieving message from CircularBuffer\n");
+
         boost::property_tree::ptree message = buffer[currentIndex];
         buffer.erase(buffer.begin() + currentIndex);
         if (buffer.empty()) {
-            hasMessage = false;
+            _hasMessage = false;
         } else {
             currentIndex = currentIndex % buffer.size();
         }
         return message;
     }
 
-    bool getHasMessage() const {
-        return hasMessage;
+    bool hasMessage() const {
+        return _hasMessage;
     }
 };
 
@@ -63,6 +69,7 @@ class StubHeartbeat {
     std::chrono::system_clock::time_point timeLastMessageReceived;
     std::chrono::system_clock::time_point timeLastHeartbeatSent;
     std::chrono::duration<double> heartbeatCadenceSeconds;
+
     int unresponsiveHeartbeatsSent;
 
     // calculate the time since the last heartbeat was sent
@@ -81,6 +88,8 @@ class StubHeartbeat {
     }
 
    public:
+    std::mutex mutex;
+
     StubHeartbeat(int heartbeatCadenceSeconds) : unresponsiveHeartbeatsSent(0), heartbeatCadenceSeconds(std::chrono::seconds(heartbeatCadenceSeconds)) {
         // Initialize time points to the current time
         timeLastMessageSent = std::chrono::system_clock::now();
@@ -94,7 +103,7 @@ class StubHeartbeat {
 
     void setTimeLastMessageReceived(const std::chrono::system_clock::time_point& time) {
         timeLastMessageReceived = time;
-        unresponsiveHeartbeatsSent = 0;
+        this->resetUnresponsiveHeartbeatsSent();
     }
 
     void setTimeLastHeartbeatSent(const std::chrono::system_clock::time_point& time) {
@@ -107,6 +116,10 @@ class StubHeartbeat {
 
     void incrementUnresponsiveHeartbeatsSent() {
         unresponsiveHeartbeatsSent++;
+    }
+
+    void resetUnresponsiveHeartbeatsSent() {
+        unresponsiveHeartbeatsSent = 0;
     }
 
     std::chrono::system_clock::time_point getTimeLastMessageSent() const {
@@ -147,132 +160,171 @@ class StubConnection {
     // Heartbeat struct to track the last heartbeat sent and received from the stub
     StubHeartbeat heartbeat;
     bool isAlive;
-    bool destructionRequested;
 
     boost::asio::io_context io_context;
     boost::asio::ip::tcp::socket socket;
 
     // circular buffer for property_tree
-    CircularPropertyTreeBuffer receiveBuffer;
-    CircularPropertyTreeBuffer sendBuffer;
+    CircularPropertyTreeBuffer receivePTreeBuffer;
+    CircularPropertyTreeBuffer sendPTreeBuffer;
+
+    std::thread connectThread;
+    std::thread receiveThread;
+    std::thread sendThread;
 
     std::mutex& cout_mutex;
+
+    // Function to continuously try to establish a connection to the Stub
+    void connect() {
+        this->writeConsole(std::cout, "connectThread started\n");
+        while (true) {
+            if (!this->isAlive) {
+                // Attempt to reconnect to the stub
+                this->writeConsole(std::cout, "Attempting to establish connection to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
+
+                // Close the socket if it's open
+                if (this->socket.is_open()) {
+                    this->socket.close();
+                }
+
+                // Attempt to connect to the Stub
+                boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::address::from_string("127.0.0.1"), this->port);
+                boost::system::error_code error;
+
+                this->socket.connect(endpoint, error);
+
+                if (!error) {
+                    this->writeConsole(std::cout, "Established connection to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
+
+                    // Place the pt object in the sendPTreeBuffer
+                    boost::property_tree::ptree pt;
+                    pt.put("message_type", "establish_connection");
+                    pt.put("message", "Establish connection to stub");
+                    this->sendPTreeBuffer.bufferMutex.lock();
+                    this->sendPTreeBuffer.push(pt);
+                    this->sendPTreeBuffer.bufferMutex.unlock();
+                    this->isAlive = true;
+                } else {
+                    this->writeConsole(std::cerr, "Failed to establish connection to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n" + "Error: " + error.message() + "\n");
+                    // Sleep before attempting to reconnect
+                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                    continue;
+                }
+            } else {
+                // Send a heartbeat if the time since the last heartbeat sent exceeds the allowed time between heartbeats
+                if (this->heartbeat.shouldSendHeartbeat()) {
+                    this->sendHeartbeat();
+                    // Put this thread to sleep for 1 second
+                    this->writeConsole(std::cout, "connect sleeping\n");
+                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                }
+            }
+        }
+        this->writeConsole(std::cout, "connectThread ending\n");
+    }
+
+    // Function to continuously listen for messages on the socket and append them to receivePTreeBuffer
+    void receiveMessages() {
+        this->writeConsole(std::cout, "receiveThread started\n");
+        while (true) {
+            while (isAlive) {
+                // Sleep for 100ms
+                this->writeConsole(std::cout, "receiveMessages sleeping\n");
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+                // Receive and convert the message to PropertyTree object
+                boost::array<char, 128> buf;
+                boost::system::error_code error;
+                size_t len = socket.read_some(boost::asio::buffer(buf), error);
+
+                // If there is an error, print it to the console
+                if (error == boost::asio::error::eof) {
+                    this->writeConsole(std::cerr, "Connection to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + " closed by peer\n");
+                    this->isAlive = false;
+                    break;  // Connection closed cleanly by peer.
+                } else if (error) {
+                    this->writeConsole(std::cerr, "Error: " + error.message() + "\n");
+                    this->isAlive = false;
+                }
+
+                // Convert the received message to a PropertyTree object
+                std::string message(buf.data(), len);
+                std::stringstream ss;
+                ss << message;
+                boost::property_tree::ptree receivedPTree;
+                boost::property_tree::read_json(ss, receivedPTree);
+
+                // Append the received PropertyTree object to receivePTreeBuffer
+                this->heartbeat.setTimeLastMessageReceived(std::chrono::system_clock::now());
+                this->receivePTreeBuffer.bufferMutex.lock();
+                receivePTreeBuffer.push(receivedPTree);
+                this->receivePTreeBuffer.bufferMutex.unlock();
+            }
+            // Sleep for 1s if the connection is not alive
+            this->writeConsole(std::cout, "!isAlive: receiveMessages sleeping\n");
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+        this->writeConsole(std::cout, "receiveThread ending\n");
+    }
+
+    // Function to continuously monitor sendPTreeBuffer and send PropertyTree objects on the socket
+    void sendMessages() {
+        this->writeConsole(std::cout, "sendThread started\n");
+        while (true) {
+            while (this->isAlive) {
+                // Sleep for 100ms
+                this->writeConsole(std::cout, "sendMessages sleeping\n");
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+                // Check if there are PropertyTree objects in sendPTreeBuffer
+                this->sendPTreeBuffer.bufferMutex.lock();
+                if (sendPTreeBuffer.hasMessage()) {
+                    this->writeConsole(std::cout, "Sending message to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
+
+                    // Pop the PropertyTree object from sendPTreeBuffer
+                    boost::property_tree::ptree pt = sendPTreeBuffer.pop();
+
+                    // Convert the PropertyTree object to a JSON string
+                    std::ostringstream buf;
+                    boost::property_tree::write_json(buf, pt, false);
+                    std::string jsonString = buf.str();
+
+                    // Send the JSON string to the stub
+                    try {
+                        this->sendMessage(pt);
+                    } catch (const boost::system::system_error& e) {
+                        this->writeConsole(std::cerr, "Error sending message: " + std::string(e.what()) + "\n");
+                        this->isAlive = false;
+                    }
+                }
+                this->sendPTreeBuffer.bufferMutex.unlock();
+            }
+            // Sleep for 1s if the connection is not alive
+            this->writeConsole(std::cout, "!isAlive: sendMessages sleeping\n");
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+        this->writeConsole(std::cout, "sendThread ending\n");
+    };
 
     // thread-safe console writing
     void writeConsole(std::ostream& outputStream, const std::string& message) {
         std::lock_guard<std::mutex> lock(this->cout_mutex);
-        std::string messagePrefix = "Stub ID: " + std::to_string(this->stub_id) + "; StubConnection: ";
-        outputStream << message;
+        std::string messageWithPrefix = "Stub ID: " + std::to_string(this->stub_id) + "; StubConnection: ";
+        outputStream << messageWithPrefix << message;
         outputStream.flush();
     };
 
-    // receive message from stub
-    void receiveMessage() {
-        boost::asio::streambuf buf;
-        boost::system::error_code error;
-
-        boost::asio::async_read_until(socket, buf, "\n", [&](const boost::system::error_code& error, size_t bytes_transferred) {
-            if (error == boost::asio::error::eof) {
-                this->writeConsole(std::cout, "Connection to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + " closed cleanly by peer\n");
-                return;
-            } else if (error) {
-                throw boost::system::system_error(error);  // Some other error.
-            }
-
-            std::istream is(&buf);
-            std::string message;
-            std::getline(is, message);
-
-            // parse message into ptree
-            std::stringstream ss;
-            ss << message;
-            boost::property_tree::ptree pt;
-            boost::property_tree::read_json(ss, pt);
-
-            // place ptree in receiveBuffer, unless message_type = "heartbeat" or "ack"
-            if (pt.get<std::string>("message_type") != "heartbeat" && pt.get<std::string>("message_type") != "ack") {
-                this->receiveBuffer.push(pt);
-                // print ptree
-                this->writeConsole(std::cout, "Placed message from Stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + " in receiveBuffer: ");
-                boost::property_tree::write_json(std::cout, pt);
-            } else {
-                this->writeConsole(std::cout, "Received message from Stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + ": ");
-                boost::property_tree::write_json(std::cout, pt);
-            }
-
-            // Update the last message received time
-            this->heartbeat.setTimeLastMessageReceived(std::chrono::system_clock::now());
-        });
-    }
-
     // send a heartbeat if the time since the last heartbeat sent exceeds the allowed time between heartbeats
     void sendHeartbeat() {
-        this->writeConsole(std::cout, "Sending heartbeat to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
         // Create a ptree object
         boost::property_tree::ptree pt;
         pt.put("message_type", "heartbeat");
         pt.put("message", "heartbeat");
 
-        this->sendMessage(pt);
-    };
-
-   public:
-    StubConnection(int stub_id,
-                   int port,
-                   std::mutex& cout_mutex,
-                   int heartbeatCadenceSeconds = 0) : stub_id(stub_id),
-                                                      port(port),
-                                                      isAlive(false),
-                                                      destructionRequested(false),
-                                                      socket(io_context),
-                                                      cout_mutex(cout_mutex),
-                                                      receiveBuffer(cout_mutex, stub_id),
-                                                      sendBuffer(cout_mutex, stub_id),
-                                                      heartbeat(heartbeatCadenceSeconds) {
-    }
-
-    void start() {
-        // Place the connection logic in a thread
-        std::thread connectionThread([this]() {
-            this->writeConsole(std::cout, "Start connection to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
-            // Connect to the port and keep the connection alive
-            while (true) {
-                if (!this->isAlive) {
-                    // Attempt to reconnect to the stub
-                    this->writeConsole(std::cout, "Attempting to establish connection to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
-                    establishConnection();
-
-                    if (!this->isAlive) {
-                        // Sleep for a certain duration before attempting to reconnect
-                        std::this_thread::sleep_for(std::chrono::seconds(1));
-
-                        // The rest of the loop is comms - if the connection is not alive, we don't want to continue
-                        continue;
-                    }
-                }
-
-                // Load the receiveBuffer with messages from the stub
-                this->receiveMessage();
-
-                // Send messages from the sendBuffer to the stub
-                if (this->sendBuffer.getHasMessage()) {
-                    boost::property_tree::ptree message = this->sendBuffer.pop();
-                    this->sendMessage(message);
-                }
-
-                // Send a heartbeat if the time since the last heartbeat sent exceeds the allowed time between heartbeats
-                if (this->heartbeat.shouldSendHeartbeat()) {
-                    this->sendHeartbeat();
-                    if (this->heartbeat.getUnresponsiveHeartbeatsSent() > 3) {
-                        this->isAlive = false;
-                        this->writeConsole(std::cout, "Stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + " is " + std::to_string(this->heartbeat.getUnresponsiveHeartbeatsSent()) + "x unresponsive\n");
-                    }
-                }
-            }
-        });
-
-        // Detach the thread to allow it to run independently
-        connectionThread.detach();
+        this->heartbeat.incrementUnresponsiveHeartbeatsSent();
+        this->writeConsole(std::cout, "Writing heartbeat to Stub " + std::to_string(this->stub_id) + " sendPTreeBuffer. Unresponsive Count: " + std::to_string(this->heartbeat.getUnresponsiveHeartbeatsSent()) + "\n");
+        std::lock_guard<std::mutex> lock(this->sendPTreeBuffer.bufferMutex);
+        this->sendPTreeBuffer.push(pt);
     };
 
     // Send a message to the stub
@@ -281,45 +333,38 @@ class StubConnection {
         std::ostringstream buf;
         boost::property_tree::write_json(buf, pt, false);
         std::string jsonString = buf.str();
-        jsonString += "\n";
+        // jsonString += "\n";
 
         // Send the JSON string to the stub
-        boost::asio::write(socket, boost::asio::buffer(jsonString));
+        boost::asio::write(this->socket, boost::asio::buffer(jsonString));
 
         // Update the last message sent time
         this->heartbeat.setTimeLastMessageSent(std::chrono::system_clock::now());
     }
 
-   private:
-    // Establish a connection to the stub
-    void establishConnection() {
-        // Attempt to connect to the stub
-        boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::address::from_string("127.0.0.1"), this->port);
-        boost::system::error_code error;
-
-        socket.connect(endpoint, error);
-
-        if (!error) {
-            cout_mutex.lock();
-            std::cout << "Established connection to stub " << this->stub_id << " on port " << this->port << std::endl;
-            std::cout << "Sending establishment message to stub " << this->stub_id << " on port " << this->port << std::endl;
-            cout_mutex.unlock();
-
-            // Create a ptree object
-            boost::property_tree::ptree pt;
-            pt.put("message_type", "establish_connection");
-            pt.put("message", "Establish connection to stub");
-
-            this->sendMessage(pt);
-            isAlive = true;
-        } else {
-            isAlive = false;
-            cout_mutex.lock();
-            std::cout << "Failed to establish connection to stub " << this->stub_id << " on port " << this->port << std::endl;
-            std::cout << "Error: " << error.message() << std::endl;
-            cout_mutex.unlock();
-        }
+   public:
+    StubConnection(int stub_id,
+                   int port,
+                   std::mutex& cout_mutex,
+                   int heartbeatCadenceSeconds = 0) : stub_id(stub_id),
+                                                      port(port),
+                                                      isAlive(false),
+                                                      socket(io_context),
+                                                      cout_mutex(cout_mutex),
+                                                      receivePTreeBuffer(cout_mutex, stub_id),
+                                                      sendPTreeBuffer(cout_mutex, stub_id),
+                                                      heartbeat(heartbeatCadenceSeconds) {
     }
+
+    void start() {
+        // Create and start the receive and send threads
+        connectThread = std::thread(&StubConnection::connect, this);
+        connectThread.detach();
+        receiveThread = std::thread(&StubConnection::receiveMessages, this);
+        receiveThread.detach();
+        sendThread = std::thread(&StubConnection::sendMessages, this);
+        sendThread.detach();
+    };
 };
 
 // Enum for stages of processing
@@ -333,7 +378,7 @@ enum class ProcessingStage : int {
 
 // Struct tracks the files that have been processed by the MapReduce process
 struct ProcessedFile {
-    std::string filePath;
+    std::string fileName;
     ProcessingStage stage;
 };
 
@@ -351,12 +396,27 @@ class Controller {
     int port;
     std::vector<std::shared_ptr<StubConnection>> stubConnections;
     std::mutex cout_mutex;
+    std::vector<ProcessedFile> processedFiles;
 
    public:
     Controller(FileManager* fileManager, int port, std::vector<int>& ports) : fileManager(fileManager), port(port) {
         // Create socket connections to stubs
         for (int i = 0; i < ports.size(); i++) {
             this->createStubConnection(i, ports[i]);
+        }
+
+        // Build vector of ProcessedFile
+        for (const auto& fullPathFile : this->fileManager->getDirectoryFileList(fileManager->getInputDirectory())) {
+            ProcessedFile file;
+            file.fileName = this->fileManager->getFileStem(fullPathFile);
+            file.stage = ProcessingStage::Discovered;
+            processedFiles.push_back(file);
+        }
+
+        // Print the contents of the processedFiles vector
+        std::cout << "Processing Files:" << std::endl;
+        for (const auto& file : processedFiles) {
+            std::cout << "File: " << file.fileName << "; Stage: " << static_cast<int>(file.stage) << std::endl;
         }
     }
 
@@ -377,11 +437,6 @@ class Controller {
     }
 
     void execute() {
-        // Read files from input directory
-        // Create socket connections to stubs
-        // Track stub connections
-        // Send heartbeat messages to stubs
-        // Receive heartbeat messages from stubs
         // Run Map process on files
         // Run Reduce process on files
         while (true) {
