@@ -4,14 +4,15 @@
 #include "ThreadManager.hpp"
 
 Stub::Stub(int port_num)
-    : acceptor(io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port_num)),
-      socket(io_service),
+    : acceptor(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port_num)),
+      socket(io_context),
       port_num(port_num) {
 }
 
 void Stub::operator()() {
     cout << "Running Stub " << this->port_num << ".\n";
     acceptor.accept(socket);
+    std::cout << "Accepted connection from " << socket.remote_endpoint().address().to_string() << ":" << socket.remote_endpoint().port() << std::endl;
     listen();
     // this->threads[0] = new boost::thread(&Stub::listen, this);
     // this->threads[0]->join();
@@ -25,6 +26,8 @@ void Stub::joinThreads() {
 
 void Stub::listen() {
     while (true) {
+        boost::array<char, 128> buf;
+
         size_t len = socket.read_some(boost::asio::buffer(buf), error);
 
         if (error == boost::asio::error::eof)
@@ -33,7 +36,25 @@ void Stub::listen() {
             throw boost::system::system_error(error);  // Some other error.
 
         std::string message(buf.data(), len);
-        std::cout << "{Stub; Port: " << this->port_num << "}: Received message: " << message << std::endl;
+        // parse message into ptree
+        std::stringstream ss;
+        ss << message;
+        boost::property_tree::ptree pt;
+        boost::property_tree::read_json(ss, pt);
+        std::cout << "{Stub; Port: " << this->port_num << "}: Received message: ";
+        boost::property_tree::write_json(std::cout, pt);
+
+        // send ack ptree back to sender
+        boost::property_tree::ptree ack;
+        ack.put("message_type", "ack");
+        std::stringstream ss_ack;
+        boost::property_tree::write_json(ss_ack, ack);
+        std::string ack_string = ss_ack.str();
+        ack_string += "\n";
+        boost::asio::write(socket, boost::asio::buffer(ack_string));
+
+        std::cout << "Sent message: ";
+        std::cout << ack_string << std::endl;
 
         if (message.find("FileManager:") != std::string::npos) {
             if (process_running.try_lock()) {

@@ -91,7 +91,8 @@
             "extensions": [
                 "ms-vscode.cpptools",
                 "yzhang.markdown-all-in-one",
-                "eamodio.gitlens"
+                "eamodio.gitlens",
+                "hediet.vscode-drawio"
             ]
         }
     },

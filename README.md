@@ -138,6 +138,24 @@ Due 2 weeks after Phase 3
   input_file: str
   output_directory: str
 }
+
+{  # From Controller to Stub: Do this task
+  "message_type": "map_task" / "reduce_task"
+  "task_id": int
+  "map" / "reduce": "<filename or List[fileName]>"
+}
+
+{ # From Stub to Controller: completed task
+  "message_type": "map_task_status" / "reduce_task_status"
+  "task_id": int
+  "map" / reduce: "<fileName or List[fileName]>"
+  "status": "in-progress" / ("complete" / "error")
+}
+
+// Stub preference is List<fileName>
+// How many files per map/reduce task?
+// map: # files / # stubs
+// reduce: # files / # stubs
 ```
 
 1. Controller iterates through files in `input_directory`
@@ -185,12 +203,3 @@ Stub CLI Command
   - Options:
     - Just log it on controller after X missed heartbeats with stub
     - Stub Status: Ded
-
-Implement a Controller class in c++. The controller needs to
-- read files from an input directory using the FileManager class
-- tell stub processes to run either Map or Reduce process on specific files
-- create socket connections to Stub processes which are listening on user-specified ports.
-- track which stub connections exist.
-  - send heartbeat messages to the stub connections.
-  - track when the last heartbeat message was sent to each stub
-  - trakc when the last heartbeat message was received from each stub
