@@ -27,6 +27,8 @@ class Stub {
     boost::system::error_code error;
     void startThreads(std::string message);
     void setupFileManager(std::string message);
+    void receiveMessage(std::string message);
+    void sendMessage(const boost::property_tree::ptree message);
 
    public:
     FileManager* filemanager;

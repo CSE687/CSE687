@@ -10,12 +10,9 @@ Stub::Stub(int port_num)
 }
 
 void Stub::operator()() {
-    cout << "Running Stub " << this->port_num << ".\n";
     acceptor.accept(socket);
     std::cout << "Accepted connection from " << socket.remote_endpoint().address().to_string() << ":" << socket.remote_endpoint().port() << std::endl;
     listen();
-    // this->threads[0] = new boost::thread(&Stub::listen, this);
-    // this->threads[0]->join();
 }
 
 void Stub::joinThreads() {
@@ -36,25 +33,7 @@ void Stub::listen() {
             throw boost::system::system_error(error);  // Some other error.
 
         std::string message(buf.data(), len);
-        // parse message into ptree
-        std::stringstream ss;
-        ss << message;
-        boost::property_tree::ptree pt;
-        boost::property_tree::read_json(ss, pt);
-        std::cout << "{Stub; Port: " << this->port_num << "}: Received message: ";
-        boost::property_tree::write_json(std::cout, pt);
-
-        // send ack ptree back to sender
-        boost::property_tree::ptree ack;
-        ack.put("message_type", "ack");
-        std::stringstream ss_ack;
-        boost::property_tree::write_json(ss_ack, ack);
-        std::string ack_string = ss_ack.str();
-        ack_string += "\n";
-        boost::asio::write(socket, boost::asio::buffer(ack_string));
-
-        std::cout << "Sent message: ";
-        std::cout << ack_string << std::endl;
+        receiveMessage(message);
 
         if (message.find("FileManager:") != std::string::npos) {
             if (process_running.try_lock()) {
@@ -62,15 +41,49 @@ void Stub::listen() {
                 this->threads[1]->detach();
             }
         } else {
-            if (process_running.try_lock()) {
-                cout << "Starting start Threads\n";
-                this->threads[1] = new boost::thread(&Stub::startThreads, this, message);
-                this->threads[1]->detach();
-            } else {
-                cout << "{Stub; Port: " << this->port_num << "}: Cannot run, another process is currently running.\n";
-            }
+            continue;
+            // if (process_running.try_lock()) {
+            //     cout << "Starting start Threads\n";
+            //     this->threads[1] = new boost::thread(&Stub::startThreads, this, message);
+            //     this->threads[1]->detach();
+            // } else {
+            //     cout << "[Stub; Port: " << this->port_num << "]: Cannot run, another process is currently running.\n";
+            // }
         }
     }
+}
+
+void Stub::receiveMessage(std::string message) {
+    // parse message into ptree
+    std::stringstream ss;
+    ss << message;
+    boost::property_tree::ptree receivedPTree;
+    try {
+        boost::property_tree::read_json(ss, receivedPTree);
+        std::cout << "[Stub; Port: " << this->port_num << "]: Received message: ";
+        boost::property_tree::write_json(std::cout, receivedPTree);
+
+        // send ack ptree back to sender
+        boost::property_tree::ptree ack;
+        ack.put("message_type", "ack");
+        sendMessage(ack);
+    } catch (const boost::property_tree::json_parser_error& e) {
+        // Handle the exception (e.g., print error message)
+        std::cerr << "[Stub; Port: " << this->port_num << "]: Failed to read JSON: " + std::string(e.what()) + "\n";
+        return;
+    }
+}
+
+void Stub::sendMessage(const boost::property_tree::ptree message) {
+    std::ostringstream buf;
+    boost::property_tree::write_json(buf, message, false);
+    std::string jsonString = buf.str();
+    // jsonString += "\n";
+
+    // Send the JSON string to the stub
+    boost::asio::write(this->socket, boost::asio::buffer(jsonString));
+    std::cout << "[Stub; Port: " << this->port_num << "]: Sent message: ";
+    std::cout << jsonString << std::endl;
 }
 
 void Stub::setupFileManager(std::string message) {

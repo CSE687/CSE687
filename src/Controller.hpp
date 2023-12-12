@@ -174,6 +174,10 @@ class StubConnection {
 
     std::mutex& coutMutex;
 
+    std::string filemanager_input_directory;
+    std::string filemanager_output_directory;
+    std::string filemanager_temp_directory;
+
     // Function to continuously try to establish a connection to the Stub
     void connect() {
         this->writeConsole(std::cout, "connectThread started\n");
@@ -200,6 +204,9 @@ class StubConnection {
                     boost::property_tree::ptree pt;
                     pt.put("message_type", "establish_connection");
                     pt.put("message", "Establish connection to stub");
+                    // pt.put("input_directory", this->filemanager_input_directory);
+                    // pt.put("output_directory", this->filemanager_output_directory);
+                    // pt.put("temp_directory", this->filemanager_temp_directory);
                     this->sendPTreeBuffer.bufferMutex.lock();
                     this->sendPTreeBuffer.push(pt);
                     this->sendPTreeBuffer.bufferMutex.unlock();
@@ -352,6 +359,9 @@ class StubConnection {
     StubConnection(int stub_id,
                    int port,
                    std::mutex& coutMutex,
+                   std::string input_directory,
+                   std::string output_directory,
+                   std::string temp_directory,
                    int heartbeatCadenceSeconds = 0) : stub_id(stub_id),
                                                       port(port),
                                                       isAlive(false),
@@ -359,6 +369,9 @@ class StubConnection {
                                                       coutMutex(coutMutex),
                                                       receivePTreeBuffer(coutMutex, stub_id),
                                                       sendPTreeBuffer(coutMutex, stub_id),
+                                                      filemanager_input_directory(input_directory),
+                                                      filemanager_output_directory(output_directory),
+                                                      filemanager_temp_directory(temp_directory),
                                                       heartbeat(heartbeatCadenceSeconds) {
     }
 
@@ -461,7 +474,7 @@ class Controller {
     void createStubConnection(int stub_id, int port) {
         // Create a new StubConnection object and add it to the stubConnections vector
         std::cout << "Creating connection to stub " << stub_id << " on port " << port << std::endl;
-        stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port, this->coutMutex, 5));
+        stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port, this->coutMutex, this->fileManager->getInputDirectory(), this->fileManager->getOutputDirectory(), this->fileManager->getTempDirectory(), 5));
         stubConnections.back()->start();
     }
 
