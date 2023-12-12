@@ -19,11 +19,11 @@ class CircularPropertyTreeBuffer {
     std::vector<boost::property_tree::ptree> buffer;
     size_t currentIndex;
     bool _hasMessage;
-    std::mutex& cout_mutex;
+    std::mutex& coutMutex;
 
     // thread-safe console writing
     void writeConsole(std::ostream& outputStream, const std::string& message) {
-        std::lock_guard<std::mutex> lock(this->cout_mutex);
+        std::lock_guard<std::mutex> lock(this->coutMutex);
         std::string messageWithPrefix = "Stub ID: " + std::to_string(this->stub_id) + "; CircularPropertyTreeBuffer: ";
         outputStream << messageWithPrefix << message;
         outputStream.flush();
@@ -32,7 +32,7 @@ class CircularPropertyTreeBuffer {
    public:
     std::mutex bufferMutex;
 
-    CircularPropertyTreeBuffer(std::mutex& cout_mutex, int stub_id) : currentIndex(0), _hasMessage(false), cout_mutex(cout_mutex), stub_id(stub_id) {}
+    CircularPropertyTreeBuffer(std::mutex& coutMutex, int stub_id) : currentIndex(0), _hasMessage(false), coutMutex(coutMutex), stub_id(stub_id) {}
 
     void push(const boost::property_tree::ptree& message) {
         this->writeConsole(std::cout, "Pushing message to CircularBuffer\n");
@@ -172,7 +172,7 @@ class StubConnection {
     std::thread receiveThread;
     std::thread sendThread;
 
-    std::mutex& cout_mutex;
+    std::mutex& coutMutex;
 
     // Function to continuously try to establish a connection to the Stub
     void connect() {
@@ -215,7 +215,7 @@ class StubConnection {
                 if (this->heartbeat.shouldSendHeartbeat()) {
                     this->sendHeartbeat();
                     // Put this thread to sleep for 1 second
-                    this->writeConsole(std::cout, "connect sleeping\n");
+                    // this->writeConsole(std::cout, "connect sleeping\n");
                     std::this_thread::sleep_for(std::chrono::seconds(1));
                 }
             }
@@ -229,7 +229,7 @@ class StubConnection {
         while (true) {
             while (isAlive) {
                 // Sleep for 100ms
-                this->writeConsole(std::cout, "receiveMessages sleeping\n");
+                // this->writeConsole(std::cout, "receiveMessages sleeping\n");
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
                 // Receive and convert the message to PropertyTree object
@@ -239,11 +239,11 @@ class StubConnection {
 
                 // If there is an error, print it to the console
                 if (error == boost::asio::error::eof) {
-                    this->writeConsole(std::cerr, "Connection to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + " closed by peer\n");
+                    this->writeConsole(std::cout, "Connection to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + " closed by peer\n");
                     this->isAlive = false;
                     break;  // Connection closed cleanly by peer.
                 } else if (error) {
-                    this->writeConsole(std::cerr, "Error: " + error.message() + "\n");
+                    this->writeConsole(std::cout, "Error: " + error.message() + "\n");
                     this->isAlive = false;
                 }
 
@@ -252,7 +252,13 @@ class StubConnection {
                 std::stringstream ss;
                 ss << message;
                 boost::property_tree::ptree receivedPTree;
-                boost::property_tree::read_json(ss, receivedPTree);
+                try {
+                    boost::property_tree::read_json(ss, receivedPTree);
+                } catch (const boost::property_tree::json_parser_error& e) {
+                    // Handle the exception (e.g., print error message)
+                    this->writeConsole(std::cerr, "Failed to read JSON: " + std::string(e.what()) + "\n");
+                    continue;
+                }
 
                 // Append the received PropertyTree object to receivePTreeBuffer
                 this->heartbeat.setTimeLastMessageReceived(std::chrono::system_clock::now());
@@ -273,7 +279,7 @@ class StubConnection {
         while (true) {
             while (this->isAlive) {
                 // Sleep for 100ms
-                this->writeConsole(std::cout, "sendMessages sleeping\n");
+                // this->writeConsole(std::cout, "sendMessages sleeping\n");
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
                 // Check if there are PropertyTree objects in sendPTreeBuffer
@@ -308,7 +314,7 @@ class StubConnection {
 
     // thread-safe console writing
     void writeConsole(std::ostream& outputStream, const std::string& message) {
-        std::lock_guard<std::mutex> lock(this->cout_mutex);
+        std::lock_guard<std::mutex> lock(this->coutMutex);
         std::string messageWithPrefix = "Stub ID: " + std::to_string(this->stub_id) + "; StubConnection: ";
         outputStream << messageWithPrefix << message;
         outputStream.flush();
@@ -345,14 +351,14 @@ class StubConnection {
    public:
     StubConnection(int stub_id,
                    int port,
-                   std::mutex& cout_mutex,
+                   std::mutex& coutMutex,
                    int heartbeatCadenceSeconds = 0) : stub_id(stub_id),
                                                       port(port),
                                                       isAlive(false),
                                                       socket(io_context),
-                                                      cout_mutex(cout_mutex),
-                                                      receivePTreeBuffer(cout_mutex, stub_id),
-                                                      sendPTreeBuffer(cout_mutex, stub_id),
+                                                      coutMutex(coutMutex),
+                                                      receivePTreeBuffer(coutMutex, stub_id),
+                                                      sendPTreeBuffer(coutMutex, stub_id),
                                                       heartbeat(heartbeatCadenceSeconds) {
     }
 
@@ -370,14 +376,20 @@ class StubConnection {
 // Enum for stages of processing
 enum class ProcessingStage : int {
     Discovered,
-    Mapping,
-    Mapped,
-    Reducing,
-    Reduced
+    Map,
+    Reduce,
+};
+
+// Enum for processing status
+enum class ProcessingStatus : int {
+    NotStarted,
+    InProgress,
+    Complete,
 };
 
 // Struct tracks the files that have been processed by the MapReduce process
-struct ProcessedFile {
+struct ProcessFile {
+    int fileId;
     std::string fileName;
     ProcessingStage stage;
 };
@@ -387,6 +399,13 @@ struct Task {
     int taskId;
     std::string fileName;
     ProcessingStage stage;
+    ProcessingStatus status;
+};
+
+// Struct tracks which tasks are assigned to which stubs
+struct TaskAssignment {
+    int taskId;
+    int stubId;
 };
 
 // Controller class is responsible for managing the entire MapReduce process
@@ -395,8 +414,11 @@ class Controller {
     FileManager* fileManager;
     int port;
     std::vector<std::shared_ptr<StubConnection>> stubConnections;
-    std::mutex cout_mutex;
-    std::vector<ProcessedFile> processedFiles;
+    std::mutex coutMutex;
+
+    std::vector<ProcessFile> processFiles;
+    std::vector<Task> tasks;
+    std::vector<TaskAssignment> taskAssignments;
 
    public:
     Controller(FileManager* fileManager, int port, std::vector<int>& ports) : fileManager(fileManager), port(port) {
@@ -405,34 +427,41 @@ class Controller {
             this->createStubConnection(i, ports[i]);
         }
 
-        // Build vector of ProcessedFile
+        // Build vector of ProcessFile
         for (const auto& fullPathFile : this->fileManager->getDirectoryFileList(fileManager->getInputDirectory())) {
-            ProcessedFile file;
+            ProcessFile file;
             file.fileName = this->fileManager->getFileStem(fullPathFile);
             file.stage = ProcessingStage::Discovered;
-            processedFiles.push_back(file);
+            processFiles.push_back(file);
         }
 
-        // Print the contents of the processedFiles vector
+        // Print the contents of the processFiles vector
         std::cout << "Processing Files:" << std::endl;
-        for (const auto& file : processedFiles) {
+        for (const auto& file : processFiles) {
             std::cout << "File: " << file.fileName << "; Stage: " << static_cast<int>(file.stage) << std::endl;
         }
-    }
 
-    // Use fileManager to read files from directory
-    void readFiles(const std::string& directory) {
-    }
+        // For each file in processFiles, build a Task for each stage of processing
+        for (const auto& file : processFiles) {
+            Task mapTask;
+            mapTask.fileName = file.fileName;
+            mapTask.stage = ProcessingStage::Map;
+            tasks.push_back(mapTask);
 
-    // Tell stub process to run either Map or Reduce process on specific file
-    void runProcess(const std::string& processType, const std::string& fileName) {
+            Task reduceTask;
+            reduceTask.fileName = file.fileName;
+            reduceTask.stage = ProcessingStage::Reduce;
+            tasks.push_back(reduceTask);
+
+            // taskId / fileName / stage (Enum: )
+        }
     }
 
     // Create socket connection to Stub process which is listening on user-specified port
     void createStubConnection(int stub_id, int port) {
         // Create a new StubConnection object and add it to the stubConnections vector
         std::cout << "Creating connection to stub " << stub_id << " on port " << port << std::endl;
-        stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port, this->cout_mutex, 5));
+        stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port, this->coutMutex, 5));
         stubConnections.back()->start();
     }
 

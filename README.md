@@ -138,6 +138,24 @@ Due 2 weeks after Phase 3
   input_file: str
   output_directory: str
 }
+
+{  # From Controller to Stub: Do this task
+  "message_type": "map_task" / "reduce_task"
+  "task_id": int
+  "map" / "reduce": "<filename or List[fileName]>"
+}
+
+{ # From Stub to Controller: completed task
+  "message_type": "map_task_status" / "reduce_task_status"
+  "task_id": int
+  "map" / reduce: "<fileName or List[fileName]>"
+  "status": "in-progress" / ("complete" / "error")
+}
+
+// Stub preference is List<fileName>
+// How many files per map/reduce task?
+// map: # files / # stubs
+// reduce: # files / # stubs
 ```
 
 1. Controller iterates through files in `input_directory`
