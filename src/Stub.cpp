@@ -15,12 +15,6 @@ void Stub::operator()() {
     listen();
 }
 
-void Stub::joinThreads() {
-    for (int i = 0; i < 2; i++) {
-        this->threads[i]->join();
-    }
-}
-
 void Stub::listen() {
     while (true) {
         boost::array<char, 128> buf;
@@ -34,22 +28,6 @@ void Stub::listen() {
 
         std::string message(buf.data(), len);
         receiveMessage(message);
-
-        if (message.find("FileManager:") != std::string::npos) {
-            if (process_running.try_lock()) {
-                this->threads[1] = new boost::thread(&Stub::setupFileManager, this, message);
-                this->threads[1]->detach();
-            }
-        } else {
-            continue;
-            // if (process_running.try_lock()) {
-            //     cout << "Starting start Threads\n";
-            //     this->threads[1] = new boost::thread(&Stub::startThreads, this, message);
-            //     this->threads[1]->detach();
-            // } else {
-            //     cout << "[Stub; Port: " << this->port_num << "]: Cannot run, another process is currently running.\n";
-            // }
-        }
     }
 }
 
@@ -63,14 +41,54 @@ void Stub::receiveMessage(std::string message) {
         std::cout << "[Stub; Port: " << this->port_num << "]: Received message: ";
         boost::property_tree::write_json(std::cout, receivedPTree);
 
-        // send ack ptree back to sender
-        boost::property_tree::ptree ack;
-        ack.put("message_type", "ack");
-        sendMessage(ack);
+        performTask(receivedPTree);
     } catch (const boost::property_tree::json_parser_error& e) {
         // Handle the exception (e.g., print error message)
         std::cerr << "[Stub; Port: " << this->port_num << "]: Failed to read JSON: " + std::string(e.what()) + "\n";
         return;
+    }
+}
+
+void Stub::performTask(boost::property_tree::ptree message) {
+    std::string message_type = message.get<std::string>("message_type");
+
+    if (message_type == "establish_connection") {
+        std::string input_directory = "workdir/input";    // message.get<std::string>("input_directory");
+        std::string output_directory = "workdir/output";  // message.get<std::string>("output_directory");
+        std::string temp_directory = "workdir/temp";      // message.get<std::string>("temp_directory");
+        if (this->process_running.try_lock()) {
+            this->process_thread = new boost::thread(&Stub::setupFileManager, this, input_directory, output_directory, temp_directory);
+            this->process_thread->detach();
+        }
+    } else if (message_type == "heartbeat") {
+        // send ack ptree back to sender
+        boost::property_tree::ptree ack;
+        ack.put("message_type", "ack");
+        sendMessage(ack);
+    } else if (message_type == "map") {
+        if (this->process_running.try_lock()) {
+            std::vector<std::string> input_files = {
+                "workdir/input/Cymbeline.txt",
+                "workdir/input/TheTempest.txt"};
+
+            this->process_thread = new boost::thread(&Stub::startMapThreads, this, input_files);
+            this->process_thread->detach();
+        } else {
+            cout << "[Stub; Port: " << this->port_num << "]: Cannot run, another process is currently running.\n";
+        }
+    } else if (message_type == "reduce") {
+        std::vector<std::string> temp_files = {
+            "workdir/temp/Cymbeline.txt",
+            "workdir/temp/TheTempest.txt"};
+
+        if (process_running.try_lock()) {
+            this->process_thread = new boost::thread(&Stub::startReduceThreads, this, temp_files);
+            this->process_thread->detach();
+        } else {
+            cout << "[Stub; Port: " << this->port_num << "]: Cannot run, another process is currently running.\n";
+        }
+    } else {
+        std::cout << "[Stub; Port: " << this->port_num << "]: Received unkown message type.\n";
     }
 }
 
@@ -86,77 +104,47 @@ void Stub::sendMessage(const boost::property_tree::ptree message) {
     std::cout << jsonString << std::endl;
 }
 
-void Stub::setupFileManager(std::string message) {
+void Stub::setupFileManager(std::string input_directory, std::string output_directory, std::string temp_directory) {
     this->filemanager = nullptr;
     try {
-        this->filemanager = FileManager::GetInstance("workdir/input", "workdir/output", "workdir/temp");
+        this->filemanager = FileManager::GetInstance(input_directory, output_directory, temp_directory);
     } catch (exception const& exc) {
         cerr << "Could not start FileManager: " << exc.what() << endl;
         exit(1);
     }
-    process_running.unlock();
+    this->process_running.unlock();
 }
 
-void Stub::startThreads(std::string message) {
-    // TODO: get information from message rather than hardcoded.
-    std::vector<std::string> input_files = {
-        "workdir/input/Cymbeline.txt",
-        "workdir/input/TheTempest.txt",
-        "workdir/input/TheComedyOfErrors.txt",
-        "workdir/input/Love'sLabourLost.txt",
-        "workdir/input/TheTwoGentlemenOfVerona.txt",
-        "workdir/input/Winter'sTale.txt",
-        "workdir/input/All'sWellThatEndsWell.txt",
-        "workdir/input/TamingOfTheShrew.txt",
-        "workdir/input/TheTwelthNight.txt",
-        "workdir/input/PericlesPrinceOfTyre.txt",
-        "workdir/input/TroilusAndCressida.txt",
-        "workdir/input/AsYouLIkeIte.txt",
-        "workdir/input/TheMerchantOfVenice.txt",
-        "workdir/input/MeasureForMeasure.txt",
-        "workdir/input/TheMerryWivesOfWindsor.txt",
-        "workdir/input/MuchAdoAboutNothing.txt",
-        "workdir/input/AMidSummerNightsDream.txt"};
-
+void Stub::startMapThreads(std::vector<std::string> input_files) {
+    cout << "Starting map Threads\n";
     // Initialize Thread Manager and launch map threads
     ThreadManager mapThreadMang(&input_files);
     mapThreadMang.executeMapThreads();
 
-    input_files = {
-        "workdir/temp/Cymbeline.txt",
-        "workdir/temp/TheTempest.txt",
-        "workdir/temp/TheComedyOfErrors.txt",
-        "workdir/temp/Love'sLabourLost.txt",
-        "workdir/temp/TheTwoGentlemenOfVerona.txt",
-        "workdir/temp/Winter'sTale.txt",
-        "workdir/temp/All'sWellThatEndsWell.txt",
-        "workdir/temp/TamingOfTheShrew.txt",
-        "workdir/temp/TheTwelthNight.txt",
-        "workdir/temp/PericlesPrinceOfTyre.txt",
-        "workdir/temp/TroilusAndCressida.txt",
-        "workdir/temp/AsYouLIkeIte.txt",
-        "workdir/temp/TheMerchantOfVenice.txt",
-        "workdir/temp/MeasureForMeasure.txt",
-        "workdir/temp/TheMerryWivesOfWindsor.txt",
-        "workdir/temp/MuchAdoAboutNothing.txt",
-        "workdir/temp/AMidSummerNightsDream.txt"};
+    // Send acknowledge message back to the sender
+    boost::property_tree::ptree ack;
+    ack.put("message_type", "task_status");
+    ack.put("message", "complete");
+    sendMessage(ack);
+    this->process_running.unlock();
+}
 
+void Stub::startReduceThreads(std::vector<std::string> input_files) {
+    cout << "Starting reduce Threads\n";
     // Initialize Thread Manager and launch map threads
     ThreadManager reduceThreadMang(&input_files);
     reduceThreadMang.executeReduceThreads();
 
     // Send acknowledge message back to the sender
-    std::string acknowledgeMsg = "Ack Stub: " + std::to_string(this->port_num);
-    boost::asio::write(socket, boost::asio::buffer(acknowledgeMsg));
-
-    std::cout << "Acknowledgement sent" << std::endl;
-    process_running.unlock();
+    boost::property_tree::ptree ack;
+    ack.put("message_type", "task_status");
+    ack.put("message", "complete");
+    sendMessage(ack);
+    this->process_running.unlock();
 }
 
 Stub::~Stub() {
-    for (int j = 0; j < 2; j++) {
-        delete this->threads[j];
-    }
+    delete this->process_thread;
     cout << "Closing Stub client " << this->port_num << ".\n";
     socket.close(error);
     if (error)

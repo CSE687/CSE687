@@ -22,19 +22,19 @@ class Stub {
     boost::asio::ip::tcp::acceptor acceptor;
     boost::asio::ip::tcp::socket socket;
     boost::mutex process_running;
-    boost::thread* threads[2] = {};
+    boost::thread* process_thread;
 
     boost::system::error_code error;
-    void startThreads(std::string message);
-    void setupFileManager(std::string message);
+    void listen();
+    void startMapThreads(std::vector<std::string> input_files);
+    void startReduceThreads(std::vector<std::string> input_files);
+    void setupFileManager(std::string input_directory, std::string output_directory, std::string temp_directory);
     void receiveMessage(std::string message);
     void sendMessage(const boost::property_tree::ptree message);
+    void performTask(const boost::property_tree::ptree message);
 
    public:
     FileManager* filemanager;
-    void listen();
-    void terminateThreads();
-    void joinThreads();
     Stub(int port_num);
     ~Stub();
     void operator()();
