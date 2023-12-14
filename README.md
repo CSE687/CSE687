@@ -89,10 +89,10 @@ Winter 2023 class project
   - Sort Class
   - Sort Optimization
 - Chandler
-  - [ ] How do DLL's work?
-  - [ ] If Reduce & Map share a Base class - does the base class need a DLL?
-  - [ ] Does it need to be in a shared DLL?
-  - [ ] Explicit is preferred
+  - [X] How do DLL's work?
+  - [X] If Reduce & Map share a Base class - does the base class need a DLL?
+  - [X] Does it need to be in a shared DLL?
+  - [X] Explicit is preferred
 
 ## Phase 3
 
@@ -118,7 +118,7 @@ Due week after midterm
   - Dev: Chandler
 - [ ] Directly combine Sort/Reduce (map<string, vector<int>> -> map<string, int>)
   - Dev: Wes
-- [ ] Documentation
+- [X] Documentation
   - Dev: Chandler
 
 ## Phase 4
