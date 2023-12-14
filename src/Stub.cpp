@@ -56,9 +56,9 @@ void Stub::performTask(boost::property_tree::ptree message) {
         std::string input_directory = message.get<std::string>("input_directory");
         std::string output_directory = message.get<std::string>("output_directory");
         std::string temp_directory = message.get<std::string>("temp_directory");
-        if (this->process_running.try_lock()) {
-            this->process_thread = new boost::thread(&Stub::setupFileManager, this, input_directory, output_directory, temp_directory);
-            this->process_thread->detach();
+        if (this->stubProcess.process_lock.try_lock()) {
+            this->stubProcess.process_thread = new boost::thread(&Stub::setupFileManager, this, input_directory, output_directory, temp_directory);
+            this->stubProcess.process_thread->detach();
         }
     } else if (message_type == "heartbeat") {
         // send ack ptree back to sender
@@ -66,13 +66,13 @@ void Stub::performTask(boost::property_tree::ptree message) {
         ack.put("message_type", "ack");
         sendMessage(ack);
     } else if (message_type == "map") {
-        if (this->process_running.try_lock()) {
+        if (this->stubProcess.process_lock.try_lock()) {
             std::vector<std::string> input_files = {
                 "workdir/input/Cymbeline.txt",
                 "workdir/input/TheTempest.txt"};
 
-            this->process_thread = new boost::thread(&Stub::startMapThreads, this, input_files);
-            this->process_thread->detach();
+            this->stubProcess.process_thread = new boost::thread(&Stub::startMapThreads, this, input_files);
+            this->stubProcess.process_thread->detach();
         } else {
             cout << "[Stub; Port: " << this->port_num << "]: Cannot run, another process is currently running.\n";
         }
@@ -81,9 +81,9 @@ void Stub::performTask(boost::property_tree::ptree message) {
             "workdir/temp/Cymbeline.txt",
             "workdir/temp/TheTempest.txt"};
 
-        if (process_running.try_lock()) {
-            this->process_thread = new boost::thread(&Stub::startReduceThreads, this, temp_files);
-            this->process_thread->detach();
+        if (stubProcess.process_lock.try_lock()) {
+            this->stubProcess.process_thread = new boost::thread(&Stub::startReduceThreads, this, temp_files);
+            this->stubProcess.process_thread->detach();
         } else {
             cout << "[Stub; Port: " << this->port_num << "]: Cannot run, another process is currently running.\n";
         }
@@ -112,7 +112,7 @@ void Stub::setupFileManager(std::string input_directory, std::string output_dire
         cerr << "Could not start FileManager: " << exc.what() << endl;
         exit(1);
     }
-    this->process_running.unlock();
+    this->stubProcess.process_lock.unlock();
 }
 
 void Stub::startMapThreads(std::vector<std::string> input_files) {
@@ -126,7 +126,7 @@ void Stub::startMapThreads(std::vector<std::string> input_files) {
     ack.put("message_type", "task_status");
     ack.put("message", "complete");
     sendMessage(ack);
-    this->process_running.unlock();
+    this->stubProcess.process_lock.unlock();
 }
 
 void Stub::startReduceThreads(std::vector<std::string> input_files) {
@@ -140,11 +140,11 @@ void Stub::startReduceThreads(std::vector<std::string> input_files) {
     ack.put("message_type", "task_status");
     ack.put("message", "complete");
     sendMessage(ack);
-    this->process_running.unlock();
+    this->stubProcess.process_lock.unlock();
 }
 
 Stub::~Stub() {
-    delete this->process_thread;
+    delete this->stubProcess.process_thread;
     cout << "Closing Stub client " << this->port_num << ".\n";
     socket.close(error);
     if (error)
