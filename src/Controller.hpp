@@ -204,9 +204,9 @@ class StubConnection {
                     boost::property_tree::ptree pt;
                     pt.put("message_type", "establish_connection");
                     pt.put("message", "Establish connection to stub");
-                    // pt.put("input_directory", this->filemanager_input_directory);
-                    // pt.put("output_directory", this->filemanager_output_directory);
-                    // pt.put("temp_directory", this->filemanager_temp_directory);
+                    pt.put("input_directory", this->filemanager_input_directory);
+                    pt.put("output_directory", this->filemanager_output_directory);
+                    pt.put("temp_directory", this->filemanager_temp_directory);
                     this->sendPTreeBuffer.bufferMutex.lock();
                     this->sendPTreeBuffer.push(pt);
                     this->sendPTreeBuffer.bufferMutex.unlock();

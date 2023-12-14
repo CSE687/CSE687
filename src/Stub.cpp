@@ -17,7 +17,7 @@ void Stub::operator()() {
 
 void Stub::listen() {
     while (true) {
-        boost::array<char, 128> buf;
+        boost::array<char, 496> buf;
 
         size_t len = socket.read_some(boost::asio::buffer(buf), error);
 
@@ -53,9 +53,9 @@ void Stub::performTask(boost::property_tree::ptree message) {
     std::string message_type = message.get<std::string>("message_type");
 
     if (message_type == "establish_connection") {
-        std::string input_directory = "workdir/input";    // message.get<std::string>("input_directory");
-        std::string output_directory = "workdir/output";  // message.get<std::string>("output_directory");
-        std::string temp_directory = "workdir/temp";      // message.get<std::string>("temp_directory");
+        std::string input_directory = message.get<std::string>("input_directory");
+        std::string output_directory = message.get<std::string>("output_directory");
+        std::string temp_directory = message.get<std::string>("temp_directory");
         if (this->process_running.try_lock()) {
             this->process_thread = new boost::thread(&Stub::setupFileManager, this, input_directory, output_directory, temp_directory);
             this->process_thread->detach();
