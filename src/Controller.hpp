@@ -164,19 +164,11 @@ class StubConnection {
     boost::asio::io_context io_context;
     boost::asio::ip::tcp::socket socket;
 
-    // circular buffer for property_tree
-    CircularPropertyTreeBuffer receivePTreeBuffer;
-    CircularPropertyTreeBuffer sendPTreeBuffer;
-
     std::thread connectThread;
     std::thread receiveThread;
     std::thread sendThread;
 
     std::mutex& coutMutex;
-
-    std::string filemanager_input_directory;
-    std::string filemanager_output_directory;
-    std::string filemanager_temp_directory;
 
     // Function to continuously try to establish a connection to the Stub
     void connect() {
@@ -356,12 +348,13 @@ class StubConnection {
     }
 
    public:
+    // circular buffer for property_tree
+    CircularPropertyTreeBuffer receivePTreeBuffer;
+    CircularPropertyTreeBuffer sendPTreeBuffer;
+
     StubConnection(int stub_id,
                    int port,
                    std::mutex& coutMutex,
-                   std::string input_directory,
-                   std::string output_directory,
-                   std::string temp_directory,
                    int heartbeatCadenceSeconds = 0) : stub_id(stub_id),
                                                       port(port),
                                                       isAlive(false),
@@ -369,13 +362,24 @@ class StubConnection {
                                                       coutMutex(coutMutex),
                                                       receivePTreeBuffer(coutMutex, stub_id),
                                                       sendPTreeBuffer(coutMutex, stub_id),
-                                                      filemanager_input_directory(input_directory),
-                                                      filemanager_output_directory(output_directory),
-                                                      filemanager_temp_directory(temp_directory),
                                                       heartbeat(heartbeatCadenceSeconds) {
     }
 
-    void start() {
+    void start(std::string input_directory, std::string output_directory, std::string temp_directory) {
+        // Pre-fill the sendPTreeBuffer with a message to establish a connection to the stub
+        // Place the pt object in the sendPTreeBuffer
+        boost::property_tree::ptree pt;
+        pt.put("message_type", "establish_connection");
+        pt.put("message", "Establish connection to stub");
+        pt.put("input_directory", input_directory);
+        pt.put("output_directory", output_directory);
+        pt.put("temp_directory", temp_directory);
+
+        // Add the ptree to the sendPTreeBuffer
+        this->sendPTreeBuffer.bufferMutex.lock();
+        this->sendPTreeBuffer.push(pt);
+        this->sendPTreeBuffer.bufferMutex.unlock();
+
         // Create and start the receive and send threads
         connectThread = std::thread(&StubConnection::connect, this);
         connectThread.detach();
@@ -384,6 +388,26 @@ class StubConnection {
         sendThread = std::thread(&StubConnection::sendMessages, this);
         sendThread.detach();
     };
+
+    // Getter for stub_id
+    int getStubId() const {
+        return stub_id;
+    }
+
+    // Getter for port
+    int getPort() const {
+        return port;
+    }
+
+    // Getter for heartbeat
+    const StubHeartbeat& getHeartbeat() const {
+        return heartbeat;
+    }
+
+    // Getter for isAlive
+    bool getIsAlive() const {
+        return isAlive;
+    }
 };
 
 // Enum for stages of processing
@@ -433,6 +457,43 @@ class Controller {
     std::vector<Task> tasks;
     std::vector<TaskAssignment> taskAssignments;
 
+    // // enqueue a task to the stub with the least number of tasks assigned
+    // void enqueueTask(const Task& task) {
+    //     // Find the stub with the least number of tasks assigned
+    //     int stubId = 0;
+    //     int minTasksAssigned = INT_MAX;
+    //     for (const auto& stubConnection : stubConnections) {
+    //         int tasksAssigned = 0;
+    //         for (const auto& taskAssignment : taskAssignments) {
+    //             if (taskAssignment.stubId == stubConnection->getStubId()) {
+    //                 tasksAssigned++;
+    //             }
+    //         }
+    //         if (tasksAssigned < minTasksAssigned) {
+    //             stubId = stubConnection->getStubId();
+    //             minTasksAssigned = tasksAssigned;
+    //         }
+    //     }
+
+    //     // Create a TaskAssignment object and add it to the taskAssignments vector
+    //     TaskAssignment taskAssignment;
+    //     taskAssignment.taskId = task.taskId;
+    //     taskAssignment.stubId = stubId;
+    //     taskAssignments.push_back(taskAssignment);
+
+    //     // Create a ptree object
+    //     boost::property_tree::ptree pt;
+    //     pt.put("message_type", "enqueue_task");
+    //     pt.put("task_id", task.taskId);
+    //     pt.put("file_name", task.fileName);
+    //     pt.put("stage", static_cast<int>(task.stage));
+
+    //     // Place the pt object in the sendPTreeBuffer
+    //     stubConnections[stubId]->sendPTreeBuffer.bufferMutex.lock();
+    //     stubConnections[stubId]->sendPTreeBuffer.push(pt);
+    //     stubConnections[stubId]->sendPTreeBuffer.bufferMutex.unlock();
+    // }
+
    public:
     Controller(FileManager* fileManager, int port, std::vector<int>& ports) : fileManager(fileManager), port(port) {
         // Create socket connections to stubs
@@ -474,8 +535,8 @@ class Controller {
     void createStubConnection(int stub_id, int port) {
         // Create a new StubConnection object and add it to the stubConnections vector
         std::cout << "Creating connection to stub " << stub_id << " on port " << port << std::endl;
-        stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port, this->coutMutex, this->fileManager->getInputDirectory(), this->fileManager->getOutputDirectory(), this->fileManager->getTempDirectory(), 5));
-        stubConnections.back()->start();
+        stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port, this->coutMutex, 5));
+        stubConnections.back()->start(this->fileManager->getInputDirectory(), this->fileManager->getOutputDirectory(), this->fileManager->getTempDirectory());
     }
 
     void execute() {
