@@ -7,6 +7,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <chrono>
 #include <map>
+#include <set>
 #include <string>
 #include <thread>
 #include <vector>
@@ -34,6 +35,7 @@ class CircularPropertyTreeBuffer {
 
     CircularPropertyTreeBuffer(std::mutex& coutMutex, int stub_id) : currentIndex(0), _hasMessage(false), coutMutex(coutMutex), stub_id(stub_id) {}
 
+    // push a message to the back of the buffer
     void push(const boost::property_tree::ptree& message) {
         this->writeConsole(std::cout, "Pushing message to CircularBuffer\n");
         buffer.push_back(message);
@@ -41,6 +43,7 @@ class CircularPropertyTreeBuffer {
         _hasMessage = true;
     }
 
+    // pop the first message from the buffer
     boost::property_tree::ptree pop() {
         if (!_hasMessage) {
             this->writeConsole(std::cout, "Warning: Tried to retrieve message from CircularBuffer but no message exists\n");
@@ -58,8 +61,15 @@ class CircularPropertyTreeBuffer {
         return message;
     }
 
+    // check if the buffer has a message
     bool hasMessage() const {
         return _hasMessage;
+    }
+
+    // remove all messages from the buffer
+    void clear() {
+        buffer.clear();
+        _hasMessage = false;
     }
 };
 
@@ -164,19 +174,15 @@ class StubConnection {
     boost::asio::io_context io_context;
     boost::asio::ip::tcp::socket socket;
 
-    // circular buffer for property_tree
-    CircularPropertyTreeBuffer receivePTreeBuffer;
-    CircularPropertyTreeBuffer sendPTreeBuffer;
-
     std::thread connectThread;
     std::thread receiveThread;
     std::thread sendThread;
 
-    std::mutex& coutMutex;
+    std::string input_directory;
+    std::string output_directory;
+    std::string temp_directory;
 
-    std::string filemanager_input_directory;
-    std::string filemanager_output_directory;
-    std::string filemanager_temp_directory;
+    std::mutex& coutMutex;
 
     // Function to continuously try to establish a connection to the Stub
     void connect() {
@@ -204,13 +210,16 @@ class StubConnection {
                     boost::property_tree::ptree pt;
                     pt.put("message_type", "establish_connection");
                     pt.put("message", "Establish connection to stub");
-                    pt.put("input_directory", this->filemanager_input_directory);
-                    pt.put("output_directory", this->filemanager_output_directory);
-                    pt.put("temp_directory", this->filemanager_temp_directory);
+                    pt.put("input_directory", input_directory);
+                    pt.put("output_directory", output_directory);
+                    pt.put("temp_directory", temp_directory);
+
+                    // Add the ptree to the sendPTreeBuffer
                     this->sendPTreeBuffer.bufferMutex.lock();
                     this->sendPTreeBuffer.push(pt);
                     this->sendPTreeBuffer.bufferMutex.unlock();
-                    this->isAlive = true;
+
+                    this->setIsAlive(true);
                 } else {
                     this->writeConsole(std::cerr, "Failed to establish connection to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n" + "Error: " + error.message() + "\n");
                     // Sleep before attempting to reconnect
@@ -247,11 +256,11 @@ class StubConnection {
                 // If there is an error, print it to the console
                 if (error == boost::asio::error::eof) {
                     this->writeConsole(std::cout, "Connection to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + " closed by peer\n");
-                    this->isAlive = false;
+                    this->setIsAlive(false);
                     break;  // Connection closed cleanly by peer.
                 } else if (error) {
                     this->writeConsole(std::cout, "Error: " + error.message() + "\n");
-                    this->isAlive = false;
+                    this->setIsAlive(false);
                 }
 
                 // Convert the received message to a PropertyTree object
@@ -269,9 +278,19 @@ class StubConnection {
 
                 // Append the received PropertyTree object to receivePTreeBuffer
                 this->heartbeat.setTimeLastMessageReceived(std::chrono::system_clock::now());
-                this->receivePTreeBuffer.bufferMutex.lock();
-                receivePTreeBuffer.push(receivedPTree);
-                this->receivePTreeBuffer.bufferMutex.unlock();
+
+                // If the message type is "ack", continue
+                if (receivedPTree.get<std::string>("message_type") == "ack") {
+                    this->writeConsole(std::cout, "Received ack from stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
+                    continue;
+                } else {
+                    this->writeConsole(std::cout, "Received message from stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
+                    this->writeConsole(std::cout, "Writing message to Stub " + std::to_string(this->stub_id) + " receivePTreeBuffer\n");
+
+                    this->receivePTreeBuffer.bufferMutex.lock();
+                    receivePTreeBuffer.push(receivedPTree);
+                    this->receivePTreeBuffer.bufferMutex.unlock();
+                }
             }
             // Sleep for 1s if the connection is not alive
             this->writeConsole(std::cout, "!isAlive: receiveMessages sleeping\n");
@@ -307,7 +326,7 @@ class StubConnection {
                         this->sendMessage(pt);
                     } catch (const boost::system::system_error& e) {
                         this->writeConsole(std::cerr, "Error sending message: " + std::string(e.what()) + "\n");
-                        this->isAlive = false;
+                        this->setIsAlive(false);
                     }
                 }
                 this->sendPTreeBuffer.bufferMutex.unlock();
@@ -355,23 +374,49 @@ class StubConnection {
         this->heartbeat.setTimeLastMessageSent(std::chrono::system_clock::now());
     }
 
+    // set isAlive to false
+    void setIsAlive(bool isAlive) {
+        this->isAlive = isAlive;
+
+        if (!isAlive) {
+            // Clear the send and receive buffers
+            this->sendPTreeBuffer.bufferMutex.lock();
+            this->sendPTreeBuffer.clear();
+            this->sendPTreeBuffer.bufferMutex.unlock();
+            this->receivePTreeBuffer.bufferMutex.lock();
+            this->receivePTreeBuffer.clear();
+            this->receivePTreeBuffer.bufferMutex.unlock();
+
+            // Place message in receivePTreeBuffer to notify the Controller that the connection is no longer alive
+            boost::property_tree::ptree pt;
+            pt.put("message_type", "connection_closed");
+            this->receivePTreeBuffer.bufferMutex.lock();
+            this->receivePTreeBuffer.push(pt);
+            this->receivePTreeBuffer.bufferMutex.unlock();
+        }
+    }
+
    public:
+    // circular buffer for property_tree
+    CircularPropertyTreeBuffer receivePTreeBuffer;
+    CircularPropertyTreeBuffer sendPTreeBuffer;
+
     StubConnection(int stub_id,
                    int port,
-                   std::mutex& coutMutex,
                    std::string input_directory,
                    std::string output_directory,
                    std::string temp_directory,
+                   std::mutex& coutMutex,
                    int heartbeatCadenceSeconds = 0) : stub_id(stub_id),
                                                       port(port),
+                                                      input_directory(input_directory),
+                                                      output_directory(output_directory),
+                                                      temp_directory(temp_directory),
                                                       isAlive(false),
                                                       socket(io_context),
                                                       coutMutex(coutMutex),
                                                       receivePTreeBuffer(coutMutex, stub_id),
                                                       sendPTreeBuffer(coutMutex, stub_id),
-                                                      filemanager_input_directory(input_directory),
-                                                      filemanager_output_directory(output_directory),
-                                                      filemanager_temp_directory(temp_directory),
                                                       heartbeat(heartbeatCadenceSeconds) {
     }
 
@@ -384,41 +429,351 @@ class StubConnection {
         sendThread = std::thread(&StubConnection::sendMessages, this);
         sendThread.detach();
     };
+
+    // Getter for stub_id
+    int getStubId() const {
+        return stub_id;
+    }
+
+    // Getter for port
+    int getPort() const {
+        return port;
+    }
+
+    // Getter for heartbeat
+    const StubHeartbeat& getHeartbeat() const {
+        return heartbeat;
+    }
+
+    // Getter for isAlive
+    bool getIsAlive() const {
+        return isAlive;
+    }
 };
 
 // Enum for stages of processing
 enum class ProcessingStage : int {
-    Discovered,
     Map,
     Reduce,
 };
 
 // Enum for processing status
 enum class ProcessingStatus : int {
+    Error,
     NotStarted,
+    SentToStub,
     InProgress,
     Complete,
 };
 
 // Struct tracks the files that have been processed by the MapReduce process
-struct ProcessFile {
+struct File {
     int fileId;
-    std::string fileName;
-    ProcessingStage stage;
-};
-
-// Struct tracks in progress tasks, the stub the task is assigned to, and the file being processed
-struct Task {
-    int taskId;
     std::string fileName;
     ProcessingStage stage;
     ProcessingStatus status;
 };
 
-// Struct tracks which tasks are assigned to which stubs
-struct TaskAssignment {
+// Struct tracks in progress tasks, the stub the task is assigned to, and the file being processed
+struct Task {
     int taskId;
+    int fileId;
     int stubId;
+    int batchId;
+    ProcessingStage stage;
+    ProcessingStatus status;
+};
+
+// Struct tracks the batches of tasks that are sent to stubs
+struct Batch {
+    int batchId;
+    int stubId;
+    std::set<int> taskIds;
+    ProcessingStage stage;
+    ProcessingStatus status;
+};
+
+// TaskManager class manages the tasks and their assignments
+class TaskManager {
+   private:
+    std::vector<File> files;
+    std::vector<Task> tasks;
+    std::vector<Batch> batches;
+
+    std::mutex& coutMutex;
+    std::mutex taskManagerMutex;
+
+    // Add a process file to the task manager
+    void addProcessFile(int fileId, const std::string& fileName, ProcessingStage stage, ProcessingStatus status = ProcessingStatus::NotStarted) {
+        File file;
+        file.fileId = fileId;
+        file.fileName = fileName;
+        file.stage = stage;
+        file.status = status;
+        files.push_back(file);
+    }
+
+    // Add a task to the task manager
+    void addTask(int taskId, const int& fileId, const int& stubId, const int& batchId, ProcessingStage stage, ProcessingStatus status) {
+        Task task;
+        task.taskId = taskId;
+        task.fileId = fileId;
+        task.stubId = stubId;
+        task.batchId = batchId;
+        task.stage = stage;
+        task.status = status;
+        tasks.push_back(task);
+    }
+
+    // Add a batch to the task manager
+    void addBatch(int batchId, int stubId, ProcessingStage stage, ProcessingStatus status) {
+        Batch batch;
+        batch.batchId = batchId;
+        batch.stubId = stubId;
+        batch.stage = stage;
+        batch.status = status;
+        batches.push_back(batch);
+    }
+
+   public:
+    // Constructor takes a vector of files, vector of stubIds
+    TaskManager(std::vector<std::string> filePaths, std::vector<int> stubIds, std::mutex& coutMutex) : coutMutex(coutMutex) {
+        // Build vector of File
+        int fileId = 0;
+        for (const auto& fullPathFile : filePaths) {
+            this->addProcessFile(fileId, fullPathFile, ProcessingStage::Map, ProcessingStatus::NotStarted);
+            fileId++;
+        }
+
+        // Create a Batch for each stubId and ProcessingStage
+        int batchId = 0;
+        for (const auto& stubId : stubIds) {
+            this->addBatch(batchId, stubId, ProcessingStage::Map, ProcessingStatus::NotStarted);
+            batchId++;
+            this->addBatch(batchId, stubId, ProcessingStage::Reduce, ProcessingStatus::NotStarted);
+            batchId++;
+        }
+
+        // For each file in files, build a Task for each stage of processing
+        int taskId = 0;
+        for (const auto& file : this->files) {
+            this->addTask(taskId, file.fileId, -1, -1, ProcessingStage::Map, ProcessingStatus::NotStarted);
+            taskId++;
+            this->addTask(taskId, file.fileId, -1, -1, ProcessingStage::Reduce, ProcessingStatus::NotStarted);
+            taskId++;
+        }
+
+        // Round-robin the Map tasks between the Map Batches
+        int mapBatchIndex = 0;
+        std::vector<Batch> mapBatches = this->getMapBatches();
+        for (const auto& task : this->getMapTasks()) {
+            this->assignTaskToBatch(mapBatches[mapBatchIndex].batchId, task.taskId);
+            mapBatchIndex = (mapBatchIndex + 1) % mapBatches.size();
+        }
+
+        // Round-robin the Reduce tasks between the Reduce Batches
+        int reduceBatchIndex = 0;
+        std::vector<Batch> reduceBatches = this->getReduceBatches();
+        for (const auto& task : this->getReduceTasks()) {
+            this->assignTaskToBatch(reduceBatches[reduceBatchIndex].batchId, task.taskId);
+            reduceBatchIndex = (reduceBatchIndex + 1) % reduceBatches.size();
+        }
+
+        this->print();
+    }
+
+    // Set a taskId to a batch
+    void assignTaskToBatch(int batchId, int taskId) {
+        // Check which batchId the task is already assigned to and remove it from that batch
+        int existingBatchId = tasks[taskId].batchId;
+        if (existingBatchId != -1) {
+            batches[existingBatchId].taskIds.erase(taskId);
+        }
+        // Add the task to the specified batch
+        batches[batchId].taskIds.insert(taskId);
+        // Set the task's batchId
+        tasks[taskId].batchId = batchId;
+        tasks[taskId].stubId = batches[batchId].stubId;
+    }
+
+    // Sets a task's stub to the specified stub
+    void setTaskStub(int taskId, int stubId) {
+        tasks[taskId].stubId = stubId;
+    }
+
+    // Set the stage of a file
+    void setFileStage(int fileId, ProcessingStage stage) {
+        files[fileId].stage = stage;
+    }
+
+    // Set the status of a file
+    void setFileStatus(int fileId, ProcessingStatus status) {
+        files[fileId].status = status;
+    }
+
+    // Set a task's stage to the specified stage
+    void setTaskStage(int taskId, ProcessingStage stage) {
+        tasks[taskId].stage = stage;
+        // Set the stage of the file associated with the task
+        this->setFileStage(tasks[taskId].fileId, stage);
+    }
+
+    // Sets a task's status to the specified status
+    void setTaskStatus(int taskId, ProcessingStatus status) {
+        tasks[taskId].status = status;
+        // Set the status of the file associated with the task
+        this->setFileStatus(tasks[taskId].fileId, status);
+    }
+
+    // Set the stage of a batch
+    void setBatchStage(int batchId, ProcessingStage stage) {
+        batches[batchId].stage = stage;
+        // Set the stage of all tasks in the batch
+        for (const auto& taskId : batches[batchId].taskIds) {
+            this->setTaskStage(taskId, stage);
+        }
+    }
+
+    // Set the status of a batch
+    void setBatchStatus(int batchId, ProcessingStatus status) {
+        batches[batchId].status = status;
+        // Set the status of all tasks in the batch
+        for (const auto& taskId : batches[batchId].taskIds) {
+            this->setTaskStatus(taskId, status);
+        }
+    }
+
+    // Get the list of Map Tasks
+    std::vector<Task> getMapTasks() {
+        std::vector<Task> mapTasks;
+        for (const auto& task : tasks) {
+            if (task.stage == ProcessingStage::Map) {
+                mapTasks.push_back(task);
+            }
+        }
+        return mapTasks;
+    }
+
+    // Get the list of Reduce Tasks
+    std::vector<Task> getReduceTasks() {
+        std::vector<Task> reduceTasks;
+        for (const auto& task : tasks) {
+            if (task.stage == ProcessingStage::Reduce) {
+                reduceTasks.push_back(task);
+            }
+        }
+        return reduceTasks;
+    }
+
+    // Get the list of Map Batches
+    std::vector<Batch> getMapBatches() {
+        std::vector<Batch> mapBatches;
+        for (const auto& batch : batches) {
+            if (batch.stage == ProcessingStage::Map) {
+                mapBatches.push_back(batch);
+            }
+        }
+        return mapBatches;
+    }
+
+    // Get the list of Reduce Batches
+    std::vector<Batch> getReduceBatches() {
+        std::vector<Batch> reduceBatches;
+        for (const auto& batch : batches) {
+            if (batch.stage == ProcessingStage::Reduce) {
+                reduceBatches.push_back(batch);
+            }
+        }
+        return reduceBatches;
+    }
+
+    // Get the list of Batches
+    const std::vector<Batch>& getBatches() const {
+        return batches;
+    }
+
+    // Get the list of process files
+    const std::vector<File>& getProcessFiles() const {
+        return files;
+    }
+
+    // Get the list of tasks
+    const std::vector<Task>& getTasks() const {
+        return tasks;
+    }
+
+    // Boolean to determine if all map stage batches are complete
+    bool allMapBatchesComplete() {
+        for (const auto& batch : this->getMapBatches()) {
+            if (batch.status != ProcessingStatus::Complete) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Boolean to determine if all reduce stage batches are complete
+    bool allReduceBatchesComplete() {
+        for (const auto& batch : this->getReduceBatches()) {
+            if (batch.status != ProcessingStatus::Complete) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Print the contents of the files vector
+    void printFiles() {
+        std::lock_guard<std::mutex> lock(this->coutMutex);
+        std::cout << "Files: " << std::endl;
+        for (const auto& file : files) {
+            std::cout << "File ID: " << file.fileId << "; File Name: " << file.fileName << "; Stage: " << static_cast<int>(file.stage) << "; Status: " << static_cast<int>(file.status) << std::endl;
+        }
+        std::cout << std::endl;
+    }
+
+    // Print the contents of the tasks vector
+    void printTasks() {
+        std::lock_guard<std::mutex> lock(this->coutMutex);
+        std::cout << "Tasks: " << std::endl;
+        for (const auto& task : tasks) {
+            std::cout << "Task ID: " << task.taskId << "; File ID: " << task.fileId << "; Stub ID: " << task.stubId << "; Batch ID: " << task.batchId << "; Stage: " << static_cast<int>(task.stage) << "; Status: " << static_cast<int>(task.status) << std::endl;
+        }
+        std::cout << std::endl;
+    }
+
+    // Print the contents of the batches vector
+    void printBatches() {
+        std::lock_guard<std::mutex> lock(this->coutMutex);
+        std::cout << "Batches: " << std::endl;
+        for (const auto& batch : batches) {
+            std::cout << "Batch ID: " << batch.batchId << "; Stub ID: " << batch.stubId << "; Stage: " << static_cast<int>(batch.stage) << "; Status: " << static_cast<int>(batch.status) << std::endl;
+        }
+        std::cout << std::endl;
+    }
+
+    // Print the contents of the TaskManager
+    void print() {
+        std::lock_guard<std::mutex> lock(this->coutMutex);
+        std::cout << "TaskManager: " << std::endl;
+        std::cout << "Files: " << std::endl;
+        for (const auto& file : files) {
+            std::cout << "File ID: " << file.fileId << "; File Name: " << file.fileName << "; Stage: " << static_cast<int>(file.stage) << "; Status: " << static_cast<int>(file.status) << std::endl;
+        }
+        std::cout << "Tasks: " << std::endl;
+        for (const auto& task : tasks) {
+            std::cout << "Task ID: " << task.taskId << "; File ID: " << task.fileId << "; Stub ID: " << task.stubId << "; Batch ID: " << task.batchId << "; Stage: " << static_cast<int>(task.stage) << "; Status: " << static_cast<int>(task.status) << std::endl;
+        }
+        std::cout << "Batches: " << std::endl;
+        for (const auto& batch : batches) {
+            std::string taskIdsStr;
+            for (const auto& taskId : batch.taskIds) {
+                taskIdsStr += std::to_string(taskId) + " ";
+            }
+            std::cout << "Batch ID: " << batch.batchId << "; Stub ID: " << batch.stubId << "; Stage: " << static_cast<int>(batch.stage) << "; Status: " << static_cast<int>(batch.status) << "; TaskIds: " << taskIdsStr << std::endl;
+        }
+        std::cout << std::endl;
+    }
 };
 
 // Controller class is responsible for managing the entire MapReduce process
@@ -429,9 +784,14 @@ class Controller {
     std::vector<std::shared_ptr<StubConnection>> stubConnections;
     std::mutex coutMutex;
 
-    std::vector<ProcessFile> processFiles;
-    std::vector<Task> tasks;
-    std::vector<TaskAssignment> taskAssignments;
+    std::shared_ptr<TaskManager> taskManager;
+
+    void writeConsole(std::ostream& outputStream, const std::string& message) {
+        std::lock_guard<std::mutex> lock(this->coutMutex);
+        std::string messageWithPrefix = "Controller: ";
+        outputStream << messageWithPrefix << message;
+        outputStream.flush();
+    };
 
    public:
     Controller(FileManager* fileManager, int port, std::vector<int>& ports) : fileManager(fileManager), port(port) {
@@ -439,42 +799,27 @@ class Controller {
         for (int i = 0; i < ports.size(); i++) {
             this->createStubConnection(i, ports[i]);
         }
-
-        // Build vector of ProcessFile
-        for (const auto& fullPathFile : this->fileManager->getDirectoryFileList(fileManager->getInputDirectory())) {
-            ProcessFile file;
-            file.fileName = this->fileManager->getFileStem(fullPathFile);
-            file.stage = ProcessingStage::Discovered;
-            processFiles.push_back(file);
+        // create a list of stubIds from the stubConnections vector
+        std::vector<int> stubIds;
+        for (const auto& stubConnection : stubConnections) {
+            stubIds.push_back(stubConnection->getStubId());
         }
 
-        // Print the contents of the processFiles vector
-        std::cout << "Processing Files:" << std::endl;
-        for (const auto& file : processFiles) {
-            std::cout << "File: " << file.fileName << "; Stage: " << static_cast<int>(file.stage) << std::endl;
+        // Create string vector of file names including .txt extension
+        std::vector<std::string> fileNames;
+        for (const auto& file : this->fileManager->getDirectoryFileList(this->fileManager->getInputDirectory())) {
+            fileNames.push_back(this->fileManager->getFileStem(file) + ".txt");
         }
 
-        // For each file in processFiles, build a Task for each stage of processing
-        for (const auto& file : processFiles) {
-            Task mapTask;
-            mapTask.fileName = file.fileName;
-            mapTask.stage = ProcessingStage::Map;
-            tasks.push_back(mapTask);
-
-            Task reduceTask;
-            reduceTask.fileName = file.fileName;
-            reduceTask.stage = ProcessingStage::Reduce;
-            tasks.push_back(reduceTask);
-
-            // taskId / fileName / stage (Enum: )
-        }
+        // Initialize TaskManager
+        this->taskManager = std::make_shared<TaskManager>(fileNames, stubIds, this->coutMutex);
     }
 
     // Create socket connection to Stub process which is listening on user-specified port
     void createStubConnection(int stub_id, int port) {
         // Create a new StubConnection object and add it to the stubConnections vector
         std::cout << "Creating connection to stub " << stub_id << " on port " << port << std::endl;
-        stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port, this->coutMutex, this->fileManager->getInputDirectory(), this->fileManager->getOutputDirectory(), this->fileManager->getTempDirectory(), 5));
+        stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port, this->fileManager->getInputDirectory(), this->fileManager->getOutputDirectory(), this->fileManager->getTempDirectory(), this->coutMutex, 5));
         stubConnections.back()->start();
     }
 
@@ -482,9 +827,141 @@ class Controller {
         // Run Map process on files
         // Run Reduce process on files
         while (true) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
-    }
-};
+            // Complete all Map Batches before moving on to Reduce Batches
+            if (!this->taskManager->allMapBatchesComplete()) {
+                // this->writeConsole(std::cout, "Map Batches not complete\n");
+                // Place all Map Batch tasks with status NotStarted into the sendPTreeBuffer
+                for (const auto& batch : this->taskManager->getMapBatches()) {
+                    if (batch.status == ProcessingStatus::NotStarted) {
+                        // Create a ptree object
+                        boost::property_tree::ptree pt;
+                        pt.put("message_type", "map_task");
+                        pt.put("batch_id", std::to_string(batch.batchId));
+                        // create a string vector of file names from the taskIds in the batch
+                        std::vector<std::string> fileNames;
+                        for (const auto& taskId : batch.taskIds) {
+                            fileNames.push_back(this->taskManager->getProcessFiles()[this->taskManager->getTasks()[taskId].fileId].fileName);
+                        }
+                        // put the fileNames vector into the ptree element called "files" as comma separated values
+                        boost::property_tree::ptree files;
+                        std::string fileNamesStr;
+                        for (const auto& fileName : fileNames) {
+                            fileNamesStr += fileName + ",";
+                        }
+                        if (!fileNamesStr.empty()) {
+                            fileNamesStr.pop_back();  // Remove the trailing comma
+                        }
+                        files.put("", fileNamesStr);
+                        pt.add_child("files", files);
 
+                        // Convert the ptree to a string, including the child elements
+                        std::ostringstream buf;
+                        boost::property_tree::write_json(buf, pt, false);
+                        std::string jsonString = buf.str();
+                        // write the message to the console
+                        this->writeConsole(std::cout, "Writing message to Stub " + std::to_string(batch.stubId) + " sendPTreeBuffer: " + jsonString + "\n");
+
+                        // Add the ptree to the assigned stubId's sendPTreeBuffer
+                        this->stubConnections[batch.stubId]->sendPTreeBuffer.bufferMutex.lock();
+                        this->stubConnections[batch.stubId]->sendPTreeBuffer.push(pt);
+                        this->stubConnections[batch.stubId]->sendPTreeBuffer.bufferMutex.unlock();
+
+                        // Set the batch status to SentToStub
+                        this->taskManager->setBatchStatus(batch.batchId, ProcessingStatus::SentToStub);
+                    }
+                }
+            } else if (!this->taskManager->allReduceBatchesComplete()) {
+                // Place all Reduce Batch tasks with status NotStarted into the sendPTreeBuffer
+                for (const auto& batch : this->taskManager->getReduceBatches()) {
+                    if (batch.status == ProcessingStatus::NotStarted) {
+                        // Create a ptree object
+                        boost::property_tree::ptree pt;
+                        pt.put("message_type", "reduce_task");
+                        pt.put("batch_id", std::to_string(batch.batchId));
+                        // create a string vector of file names from the taskIds in the batch
+                        std::vector<std::string> fileNames;
+                        for (const auto& taskId : batch.taskIds) {
+                            fileNames.push_back(this->taskManager->getProcessFiles()[this->taskManager->getTasks()[taskId].fileId].fileName);
+                        }
+                        // add the fileNames vector into the ptree
+                        boost::property_tree::ptree files;
+                        std::string fileNamesStr;
+                        for (const auto& fileName : fileNames) {
+                            fileNamesStr += fileName + ",";
+                        }
+                        if (!fileNamesStr.empty()) {
+                            fileNamesStr.pop_back();  // Remove the trailing comma
+                        }
+                        files.put("", fileNamesStr);
+                        pt.add_child("files", files);
+
+                        // Converte the ptree to a string
+                        std::ostringstream buf;
+                        boost::property_tree::write_json(buf, pt, false);
+                        std::string jsonString = buf.str();
+                        // write the message to the console
+                        this->writeConsole(std::cout, "Writing message to Stub " + std::to_string(batch.stubId) + " sendPTreeBuffer: " + jsonString + "\n");
+
+                        // Add the ptree to the assigned stubId's sendPTreeBuffer
+                        this->stubConnections[batch.stubId]->sendPTreeBuffer.bufferMutex.lock();
+                        this->stubConnections[batch.stubId]->sendPTreeBuffer.push(pt);
+                        this->stubConnections[batch.stubId]->sendPTreeBuffer.bufferMutex.unlock();
+
+                        // Set the batch status to SentToStub
+                        this->taskManager->setBatchStatus(batch.batchId, ProcessingStatus::SentToStub);
+                    }
+                }
+            } else if (this->taskManager->allMapBatchesComplete() && this->taskManager->allReduceBatchesComplete()) {
+                // All batches are complete, exit the loop - we done
+                break;
+            }
+
+            // Check for messages in message queues and act on them
+            for (const auto& stubConnection : stubConnections) {
+                // Check if there are messages in the receivePTreeBuffer
+                stubConnection->receivePTreeBuffer.bufferMutex.lock();
+                if (stubConnection->receivePTreeBuffer.hasMessage()) {
+                    // Pop the message from the receivePTreeBuffer
+                    boost::property_tree::ptree pt = stubConnection->receivePTreeBuffer.pop();
+                    stubConnection->receivePTreeBuffer.bufferMutex.unlock();
+
+                    // Convert the ptree to a JSON string
+                    std::ostringstream buf;
+                    boost::property_tree::write_json(buf, pt, false);
+                    std::string jsonString = buf.str();
+                    // write the message to the console
+                    this->writeConsole(std::cout, "Received message from Stub " + std::to_string(stubConnection->getStubId()) + ": " + jsonString + "\n");
+
+                    // Check the message type
+                    std::string messageType = pt.get<std::string>("message_type");
+                    if (messageType == "batch_status") {
+                        // Get the batch_id and status from the message
+                        int batchId = std::stoi(pt.get<std::string>("batch_id"));
+                        // convert message status to ProcessingStatus enum
+                        std::string status = pt.get<std::string>("status");
+                        //  set the batch status to the status from the message
+                        if (status == "InProgress") {
+                            this->taskManager->setBatchStatus(batchId, ProcessingStatus::InProgress);
+                        } else if (status == "Complete") {
+                            this->taskManager->setBatchStatus(batchId, ProcessingStatus::Complete);
+                        } else if (status == "Error") {
+                            this->taskManager->setBatchStatus(batchId, ProcessingStatus::Error);
+                        }
+                    } else if (messageType == "connection_closed") {
+                        // get the BatchIds which are running on the stub and set their status to NotStarted
+                        for (const auto& batch : this->taskManager->getBatches()) {
+                            if (batch.stubId == stubConnection->getStubId() && batch.status != ProcessingStatus::Complete) {
+                                this->taskManager->setBatchStatus(batch.batchId, ProcessingStatus::NotStarted);
+                            }
+                        }
+                    } else {
+                        this->writeConsole(std::cout, "Unknown message type: " + messageType + "\n");
+                    }
+                } else {
+                    stubConnection->receivePTreeBuffer.bufferMutex.unlock();
+                }
+            }
+        }
+    };
+};
 #endif  // CONTROLLER_HPP
