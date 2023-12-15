@@ -141,7 +141,7 @@ Due 2 weeks after Phase 3
 
 {  # From Controller to Stub: Do this task
   "message_type": "map_task" / "reduce_task"
-  "task_id": int
+  "batch_id": int
   "map" / "reduce": "<filename or List[fileName]>"
 }
 
