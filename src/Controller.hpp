@@ -805,8 +805,14 @@ class Controller {
             stubIds.push_back(stubConnection->getStubId());
         }
 
+        // Create string vector of file names including .txt extension
+        std::vector<std::string> fileNames;
+        for (const auto& file : this->fileManager->getDirectoryFileList(this->fileManager->getInputDirectory())) {
+            fileNames.push_back(this->fileManager->getFileStem(file) + ".txt");
+        }
+
         // Initialize TaskManager
-        this->taskManager = std::make_shared<TaskManager>(this->fileManager->getDirectoryFileList(this->fileManager->getInputDirectory()), stubIds, this->coutMutex);
+        this->taskManager = std::make_shared<TaskManager>(fileNames, stubIds, this->coutMutex);
     }
 
     // Create socket connection to Stub process which is listening on user-specified port

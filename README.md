@@ -139,17 +139,17 @@ Due 2 weeks after Phase 3
   output_directory: str
 }
 
+# SOLD
 {  # From Controller to Stub: Do this task
   "message_type": "map_task" / "reduce_task"
   "batch_id": int
-  "map" / "reduce": "<filename or List[fileName]>"
+  "files": "<List[fileName]>"
 }
 
 { # From Stub to Controller: completed task
-  "message_type": "map_task_status" / "reduce_task_status"
-  "task_id": int
-  "map" / reduce: "<fileName or List[fileName]>"
-  "status": "in-progress" / ("complete" / "error")
+  "message_type": "batch_status"
+  "batch_id": int
+  "status": "InProgress", "Complete", "Error"
 }
 
 // Stub preference is List<fileName>
