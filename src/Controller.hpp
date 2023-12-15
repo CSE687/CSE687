@@ -934,7 +934,7 @@ class Controller {
 
                     // Check the message type
                     std::string messageType = pt.get<std::string>("message_type");
-                    if (messageType == "task_status") {
+                    if (messageType == "batch_status") {
                         // Get the batch_id and status from the message
                         int batchId = std::stoi(pt.get<std::string>("batch_id"));
                         int status = std::stoi(pt.get<std::string>("status"));
