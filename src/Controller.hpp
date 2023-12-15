@@ -7,6 +7,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <chrono>
 #include <map>
+#include <set>
 #include <string>
 #include <thread>
 #include <vector>
@@ -401,37 +402,302 @@ class StubConnection {
 
 // Enum for stages of processing
 enum class ProcessingStage : int {
-    Discovered,
     Map,
     Reduce,
 };
 
 // Enum for processing status
 enum class ProcessingStatus : int {
+    Error,
     NotStarted,
+    SentToStub,
     InProgress,
     Complete,
 };
 
 // Struct tracks the files that have been processed by the MapReduce process
-struct ProcessFile {
+struct File {
     int fileId;
-    std::string fileName;
-    ProcessingStage stage;
-};
-
-// Struct tracks in progress tasks, the stub the task is assigned to, and the file being processed
-struct Task {
-    int taskId;
     std::string fileName;
     ProcessingStage stage;
     ProcessingStatus status;
 };
 
-// Struct tracks which tasks are assigned to which stubs
-struct TaskAssignment {
+// Struct tracks in progress tasks, the stub the task is assigned to, and the file being processed
+struct Task {
     int taskId;
+    int fileId;
     int stubId;
+    int batchId;
+    ProcessingStage stage;
+    ProcessingStatus status;
+};
+
+// Struct tracks the batches of tasks that are sent to stubs
+struct Batch {
+    int batchId;
+    int stubId;
+    std::set<int> taskIds;
+    ProcessingStage stage;
+    ProcessingStatus status;
+};
+
+// TaskManager class manages the tasks and their assignments
+class TaskManager {
+   private:
+    std::vector<File> files;
+    std::vector<Task> tasks;
+    std::vector<Batch> batches;
+
+    std::mutex& coutMutex;
+    std::mutex taskManagerMutex;
+
+    // Add a process file to the task manager
+    void addProcessFile(int fileId, const std::string& fileName, ProcessingStage stage, ProcessingStatus status = ProcessingStatus::NotStarted) {
+        File file;
+        file.fileId = fileId;
+        file.fileName = fileName;
+        file.stage = stage;
+        file.status = status;
+        files.push_back(file);
+    }
+
+    // Add a task to the task manager
+    void addTask(int taskId, const int& fileId, const int& stubId, const int& batchId, ProcessingStage stage, ProcessingStatus status) {
+        Task task;
+        task.taskId = taskId;
+        task.fileId = fileId;
+        task.stubId = stubId;
+        task.batchId = batchId;
+        task.stage = stage;
+        task.status = status;
+        tasks.push_back(task);
+    }
+
+    // Add a batch to the task manager
+    void addBatch(int batchId, int stubId, ProcessingStage stage, ProcessingStatus status) {
+        Batch batch;
+        batch.batchId = batchId;
+        batch.stubId = stubId;
+        batch.stage = stage;
+        batch.status = status;
+        batches.push_back(batch);
+    }
+
+   public:
+    // Constructor takes a vector of files, vector of stubIds
+    TaskManager(std::vector<std::string> filePaths, std::vector<int> stubIds, std::mutex& coutMutex) : coutMutex(coutMutex) {
+        // Build vector of File
+        int fileId = 0;
+        for (const auto& fullPathFile : filePaths) {
+            this->addProcessFile(fileId, fullPathFile, ProcessingStage::Map, ProcessingStatus::NotStarted);
+            fileId++;
+        }
+
+        // Create a Batch for each stubId and ProcessingStage
+        int batchId = 0;
+        for (const auto& stubId : stubIds) {
+            this->addBatch(batchId, stubId, ProcessingStage::Map, ProcessingStatus::NotStarted);
+            batchId++;
+            this->addBatch(batchId, stubId, ProcessingStage::Reduce, ProcessingStatus::NotStarted);
+            batchId++;
+        }
+
+        // For each file in files, build a Task for each stage of processing
+        int taskId = 0;
+        for (const auto& file : this->files) {
+            this->addTask(taskId, file.fileId, -1, -1, ProcessingStage::Map, ProcessingStatus::NotStarted);
+            taskId++;
+            this->addTask(taskId, file.fileId, -1, -1, ProcessingStage::Reduce, ProcessingStatus::NotStarted);
+            taskId++;
+        }
+
+        // Round-robin the Map tasks between the Map Batches
+        int mapBatchIndex = 0;
+        std::vector<Batch> mapBatches = this->getMapBatches();
+        for (const auto& task : this->getMapTasks()) {
+            this->assignTaskToBatch(mapBatches[mapBatchIndex].batchId, task.taskId);
+            mapBatchIndex = (mapBatchIndex + 1) % mapBatches.size();
+        }
+
+        // Round-robin the Reduce tasks between the Reduce Batches
+        int reduceBatchIndex = 0;
+        std::vector<Batch> reduceBatches = this->getReduceBatches();
+        for (const auto& task : this->getReduceTasks()) {
+            this->assignTaskToBatch(reduceBatches[reduceBatchIndex].batchId, task.taskId);
+            reduceBatchIndex = (reduceBatchIndex + 1) % reduceBatches.size();
+        }
+
+        this->print();
+    }
+
+    // Set a taskId to a batch
+    void assignTaskToBatch(int batchId, int taskId) {
+        // Check which batchId the task is already assigned to and remove it from that batch
+        int existingBatchId = tasks[taskId].batchId;
+        if (existingBatchId != -1) {
+            batches[existingBatchId].taskIds.erase(taskId);
+        }
+        // Add the task to the specified batch
+        batches[batchId].taskIds.insert(taskId);
+        // Set the task's batchId
+        tasks[taskId].batchId = batchId;
+        tasks[taskId].stubId = batches[batchId].stubId;
+    }
+
+    // Sets a task's stub to the specified stub
+    void setTaskStub(int taskId, int stubId) {
+        tasks[taskId].stubId = stubId;
+    }
+
+    // Set the stage of a file
+    void setFileStage(int fileId, ProcessingStage stage) {
+        files[fileId].stage = stage;
+    }
+
+    // Set the status of a file
+    void setFileStatus(int fileId, ProcessingStatus status) {
+        files[fileId].status = status;
+    }
+
+    // Set a task's stage to the specified stage
+    void setTaskStage(int taskId, ProcessingStage stage) {
+        tasks[taskId].stage = stage;
+        // Set the stage of the file associated with the task
+        this->setFileStage(tasks[taskId].fileId, stage);
+    }
+
+    // Sets a task's status to the specified status
+    void setTaskStatus(int taskId, ProcessingStatus status) {
+        tasks[taskId].status = status;
+        // Set the status of the file associated with the task
+        this->setFileStatus(tasks[taskId].fileId, status);
+    }
+
+    // Set the stage of a batch
+    void setBatchStage(int batchId, ProcessingStage stage) {
+        batches[batchId].stage = stage;
+        // Set the stage of all tasks in the batch
+        for (const auto& taskId : batches[batchId].taskIds) {
+            this->setTaskStage(taskId, stage);
+        }
+    }
+
+    // Set the status of a batch
+    void setBatchStatus(int batchId, ProcessingStatus status) {
+        batches[batchId].status = status;
+        // Set the status of all tasks in the batch
+        for (const auto& taskId : batches[batchId].taskIds) {
+            this->setTaskStatus(taskId, status);
+        }
+    }
+
+    // Get the list of Map Tasks
+    std::vector<Task> getMapTasks() {
+        std::vector<Task> mapTasks;
+        for (const auto& task : tasks) {
+            if (task.stage == ProcessingStage::Map) {
+                mapTasks.push_back(task);
+            }
+        }
+        return mapTasks;
+    }
+
+    // Get the list of Reduce Tasks
+    std::vector<Task> getReduceTasks() {
+        std::vector<Task> reduceTasks;
+        for (const auto& task : tasks) {
+            if (task.stage == ProcessingStage::Reduce) {
+                reduceTasks.push_back(task);
+            }
+        }
+        return reduceTasks;
+    }
+
+    // Get the list of Map Batches
+    std::vector<Batch> getMapBatches() {
+        std::vector<Batch> mapBatches;
+        for (const auto& batch : batches) {
+            if (batch.stage == ProcessingStage::Map) {
+                mapBatches.push_back(batch);
+            }
+        }
+        return mapBatches;
+    }
+
+    // Get the list of Reduce Batches
+    std::vector<Batch> getReduceBatches() {
+        std::vector<Batch> reduceBatches;
+        for (const auto& batch : batches) {
+            if (batch.stage == ProcessingStage::Reduce) {
+                reduceBatches.push_back(batch);
+            }
+        }
+        return reduceBatches;
+    }
+
+    // Get the list of process files
+    const std::vector<File>& getProcessFiles() const {
+        return files;
+    }
+
+    // Get the list of tasks
+    const std::vector<Task>& getTasks() const {
+        return tasks;
+    }
+
+    // Print the contents of the files vector
+    void printFiles() {
+        std::lock_guard<std::mutex> lock(this->coutMutex);
+        std::cout << "Files: " << std::endl;
+        for (const auto& file : files) {
+            std::cout << "File ID: " << file.fileId << "; File Name: " << file.fileName << "; Stage: " << static_cast<int>(file.stage) << "; Status: " << static_cast<int>(file.status) << std::endl;
+        }
+        std::cout << std::endl;
+    }
+
+    // Print the contents of the tasks vector
+    void printTasks() {
+        std::lock_guard<std::mutex> lock(this->coutMutex);
+        std::cout << "Tasks: " << std::endl;
+        for (const auto& task : tasks) {
+            std::cout << "Task ID: " << task.taskId << "; File ID: " << task.fileId << "; Stub ID: " << task.stubId << "; Batch ID: " << task.batchId << "; Stage: " << static_cast<int>(task.stage) << "; Status: " << static_cast<int>(task.status) << std::endl;
+        }
+        std::cout << std::endl;
+    }
+
+    // Print the contents of the batches vector
+    void printBatches() {
+        std::lock_guard<std::mutex> lock(this->coutMutex);
+        std::cout << "Batches: " << std::endl;
+        for (const auto& batch : batches) {
+            std::cout << "Batch ID: " << batch.batchId << "; Stub ID: " << batch.stubId << "; Stage: " << static_cast<int>(batch.stage) << "; Status: " << static_cast<int>(batch.status) << std::endl;
+        }
+        std::cout << std::endl;
+    }
+
+    // Print the contents of the TaskManager
+    void print() {
+        std::lock_guard<std::mutex> lock(this->coutMutex);
+        std::cout << "TaskManager: " << std::endl;
+        std::cout << "Files: " << std::endl;
+        for (const auto& file : files) {
+            std::cout << "File ID: " << file.fileId << "; File Name: " << file.fileName << "; Stage: " << static_cast<int>(file.stage) << "; Status: " << static_cast<int>(file.status) << std::endl;
+        }
+        std::cout << "Tasks: " << std::endl;
+        for (const auto& task : tasks) {
+            std::cout << "Task ID: " << task.taskId << "; File ID: " << task.fileId << "; Stub ID: " << task.stubId << "; Batch ID: " << task.batchId << "; Stage: " << static_cast<int>(task.stage) << "; Status: " << static_cast<int>(task.status) << std::endl;
+        }
+        std::cout << "Batches: " << std::endl;
+        for (const auto& batch : batches) {
+            std::string taskIdsStr;
+            for (const auto& taskId : batch.taskIds) {
+                taskIdsStr += std::to_string(taskId) + " ";
+            }
+            std::cout << "Batch ID: " << batch.batchId << "; Stub ID: " << batch.stubId << "; Stage: " << static_cast<int>(batch.stage) << "; Status: " << static_cast<int>(batch.status) << "; TaskIds: " << taskIdsStr << std::endl;
+        }
+        std::cout << std::endl;
+    }
 };
 
 // Controller class is responsible for managing the entire MapReduce process
@@ -442,46 +708,7 @@ class Controller {
     std::vector<std::shared_ptr<StubConnection>> stubConnections;
     std::mutex coutMutex;
 
-    std::vector<ProcessFile> processFiles;
-    std::vector<Task> tasks;
-    std::vector<TaskAssignment> taskAssignments;
-
-    // // enqueue a task to the stub with the least number of tasks assigned
-    // void enqueueTask(const Task& task) {
-    //     // Find the stub with the least number of tasks assigned
-    //     int stubId = 0;
-    //     int minTasksAssigned = INT_MAX;
-    //     for (const auto& stubConnection : stubConnections) {
-    //         int tasksAssigned = 0;
-    //         for (const auto& taskAssignment : taskAssignments) {
-    //             if (taskAssignment.stubId == stubConnection->getStubId()) {
-    //                 tasksAssigned++;
-    //             }
-    //         }
-    //         if (tasksAssigned < minTasksAssigned) {
-    //             stubId = stubConnection->getStubId();
-    //             minTasksAssigned = tasksAssigned;
-    //         }
-    //     }
-
-    //     // Create a TaskAssignment object and add it to the taskAssignments vector
-    //     TaskAssignment taskAssignment;
-    //     taskAssignment.taskId = task.taskId;
-    //     taskAssignment.stubId = stubId;
-    //     taskAssignments.push_back(taskAssignment);
-
-    //     // Create a ptree object
-    //     boost::property_tree::ptree pt;
-    //     pt.put("message_type", "enqueue_task");
-    //     pt.put("task_id", task.taskId);
-    //     pt.put("file_name", task.fileName);
-    //     pt.put("stage", static_cast<int>(task.stage));
-
-    //     // Place the pt object in the sendPTreeBuffer
-    //     stubConnections[stubId]->sendPTreeBuffer.bufferMutex.lock();
-    //     stubConnections[stubId]->sendPTreeBuffer.push(pt);
-    //     stubConnections[stubId]->sendPTreeBuffer.bufferMutex.unlock();
-    // }
+    std::shared_ptr<TaskManager> taskManager;
 
    public:
     Controller(FileManager* fileManager, int port, std::vector<int>& ports) : fileManager(fileManager), port(port) {
@@ -489,35 +716,14 @@ class Controller {
         for (int i = 0; i < ports.size(); i++) {
             this->createStubConnection(i, ports[i]);
         }
-
-        // Build vector of ProcessFile
-        for (const auto& fullPathFile : this->fileManager->getDirectoryFileList(fileManager->getInputDirectory())) {
-            ProcessFile file;
-            file.fileName = this->fileManager->getFileStem(fullPathFile);
-            file.stage = ProcessingStage::Discovered;
-            processFiles.push_back(file);
+        // create a list of stubIds from the stubConnections vector
+        std::vector<int> stubIds;
+        for (const auto& stubConnection : stubConnections) {
+            stubIds.push_back(stubConnection->getStubId());
         }
 
-        // Print the contents of the processFiles vector
-        std::cout << "Processing Files:" << std::endl;
-        for (const auto& file : processFiles) {
-            std::cout << "File: " << file.fileName << "; Stage: " << static_cast<int>(file.stage) << std::endl;
-        }
-
-        // For each file in processFiles, build a Task for each stage of processing
-        for (const auto& file : processFiles) {
-            Task mapTask;
-            mapTask.fileName = file.fileName;
-            mapTask.stage = ProcessingStage::Map;
-            tasks.push_back(mapTask);
-
-            Task reduceTask;
-            reduceTask.fileName = file.fileName;
-            reduceTask.stage = ProcessingStage::Reduce;
-            tasks.push_back(reduceTask);
-
-            // taskId / fileName / stage (Enum: )
-        }
+        // Initialize TaskManager
+        this->taskManager = std::make_shared<TaskManager>(this->fileManager->getDirectoryFileList(this->fileManager->getInputDirectory()), stubIds, this->coutMutex);
     }
 
     // Create socket connection to Stub process which is listening on user-specified port
