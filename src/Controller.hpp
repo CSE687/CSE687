@@ -937,10 +937,16 @@ class Controller {
                     if (messageType == "batch_status") {
                         // Get the batch_id and status from the message
                         int batchId = std::stoi(pt.get<std::string>("batch_id"));
-                        int status = std::stoi(pt.get<std::string>("status"));
-
-                        // Set the batch status to the status from the message
-                        this->taskManager->setBatchStatus(batchId, static_cast<ProcessingStatus>(status));
+                        // convert message status to ProcessingStatus enum
+                        std::string status = pt.get<std::string>("status");
+                        //  set the batch status to the status from the message
+                        if (status == "InProgress") {
+                            this->taskManager->setBatchStatus(batchId, ProcessingStatus::InProgress);
+                        } else if (status == "Complete") {
+                            this->taskManager->setBatchStatus(batchId, ProcessingStatus::Complete);
+                        } else if (status == "Error") {
+                            this->taskManager->setBatchStatus(batchId, ProcessingStatus::Error);
+                        }
                     } else if (messageType == "connection_closed") {
                         // get the BatchIds which are running on the stub and set their status to NotStarted
                         for (const auto& batch : this->taskManager->getBatches()) {

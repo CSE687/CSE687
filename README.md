@@ -146,6 +146,7 @@ Due 2 weeks after Phase 3
   "files": "<List[fileName]>"
 }
 
+# SOLD
 { # From Stub to Controller: completed task
   "message_type": "batch_status"
   "batch_id": int
