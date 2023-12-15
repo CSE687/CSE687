@@ -169,6 +169,10 @@ class StubConnection {
     std::thread receiveThread;
     std::thread sendThread;
 
+    std::string input_directory;
+    std::string output_directory;
+    std::string temp_directory;
+
     std::mutex& coutMutex;
 
     // Function to continuously try to establish a connection to the Stub
@@ -192,6 +196,20 @@ class StubConnection {
 
                 if (!error) {
                     this->writeConsole(std::cout, "Established connection to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
+
+                    // Place the pt object in the sendPTreeBuffer
+                    boost::property_tree::ptree pt;
+                    pt.put("message_type", "establish_connection");
+                    pt.put("message", "Establish connection to stub");
+                    pt.put("input_directory", input_directory);
+                    pt.put("output_directory", output_directory);
+                    pt.put("temp_directory", temp_directory);
+
+                    // Add the ptree to the sendPTreeBuffer
+                    this->sendPTreeBuffer.bufferMutex.lock();
+                    this->sendPTreeBuffer.push(pt);
+                    this->sendPTreeBuffer.bufferMutex.unlock();
+
                     this->isAlive = true;
                 } else {
                     this->writeConsole(std::cerr, "Failed to establish connection to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n" + "Error: " + error.message() + "\n");
@@ -344,9 +362,15 @@ class StubConnection {
 
     StubConnection(int stub_id,
                    int port,
+                   std::string input_directory,
+                   std::string output_directory,
+                   std::string temp_directory,
                    std::mutex& coutMutex,
                    int heartbeatCadenceSeconds = 0) : stub_id(stub_id),
                                                       port(port),
+                                                      input_directory(input_directory),
+                                                      output_directory(output_directory),
+                                                      temp_directory(temp_directory),
                                                       isAlive(false),
                                                       socket(io_context),
                                                       coutMutex(coutMutex),
@@ -355,21 +379,7 @@ class StubConnection {
                                                       heartbeat(heartbeatCadenceSeconds) {
     }
 
-    void start(std::string input_directory, std::string output_directory, std::string temp_directory) {
-        // Pre-fill the sendPTreeBuffer with a message to establish a connection to the stub
-        // Place the pt object in the sendPTreeBuffer
-        boost::property_tree::ptree pt;
-        pt.put("message_type", "establish_connection");
-        pt.put("message", "Establish connection to stub");
-        pt.put("input_directory", input_directory);
-        pt.put("output_directory", output_directory);
-        pt.put("temp_directory", temp_directory);
-
-        // Add the ptree to the sendPTreeBuffer
-        this->sendPTreeBuffer.bufferMutex.lock();
-        this->sendPTreeBuffer.push(pt);
-        this->sendPTreeBuffer.bufferMutex.unlock();
-
+    void start() {
         // Create and start the receive and send threads
         connectThread = std::thread(&StubConnection::connect, this);
         connectThread.detach();
@@ -730,8 +740,8 @@ class Controller {
     void createStubConnection(int stub_id, int port) {
         // Create a new StubConnection object and add it to the stubConnections vector
         std::cout << "Creating connection to stub " << stub_id << " on port " << port << std::endl;
-        stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port, this->coutMutex, 5));
-        stubConnections.back()->start(this->fileManager->getInputDirectory(), this->fileManager->getOutputDirectory(), this->fileManager->getTempDirectory());
+        stubConnections.push_back(std::make_shared<StubConnection>(stub_id, port, this->fileManager->getInputDirectory(), this->fileManager->getOutputDirectory(), this->fileManager->getTempDirectory(), this->coutMutex, 5));
+        stubConnections.back()->start();
     }
 
     void execute() {
