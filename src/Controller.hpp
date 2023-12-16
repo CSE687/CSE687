@@ -285,20 +285,26 @@ class StubConnection {
                     continue;
                 }
 
-                // Append the received PropertyTree object to receivePTreeQueue
-                this->heartbeat.setTimeLastMessageReceived(std::chrono::system_clock::now());
+                // Safely read the message_type key from the received PropertyTree object
+                try {
+                    std::string message = receivedPTree.get<std::string>("message_type");
+                    // If the message type is "ack", continue
+                    if (message == "ack") {
+                        this->writeConsole(std::cout, "Received ack from stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
+                        continue;
+                    } else {
+                        // Append the received PropertyTree object to receivePTreeQueue
+                        this->writeConsole(std::cout, "Received message from stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
+                        this->writeConsole(std::cout, "Writing message to Stub " + std::to_string(this->stub_id) + " receivePTreeQueue\n");
 
-                // If the message type is "ack", continue
-                if (receivedPTree.get<std::string>("message_type") == "ack") {
-                    this->writeConsole(std::cout, "Received ack from stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
+                        this->receivePTreeQueue.queueMutex.lock();
+                        receivePTreeQueue.push(receivedPTree);
+                        this->receivePTreeQueue.queueMutex.unlock();
+                    }
+                } catch (const boost::property_tree::ptree_bad_path& e) {
+                    // Handle the exception (e.g., print error message)
+                    this->writeConsole(std::cerr, "Failed to read 'message_type' key from receivedPTree: " + std::string(e.what()) + "\n");
                     continue;
-                } else {
-                    this->writeConsole(std::cout, "Received message from stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
-                    this->writeConsole(std::cout, "Writing message to Stub " + std::to_string(this->stub_id) + " receivePTreeQueue\n");
-
-                    this->receivePTreeQueue.queueMutex.lock();
-                    receivePTreeQueue.push(receivedPTree);
-                    this->receivePTreeQueue.queueMutex.unlock();
                 }
             }
             // Sleep for 1s if the connection is not alive
