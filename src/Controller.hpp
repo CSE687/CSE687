@@ -760,12 +760,42 @@ class TaskManager {
         return true;
     }
 
+    // Return the string equivalent of the ProcessingStage
+    std::string getProcessingStageString(ProcessingStage stage) {
+        switch (stage) {
+            case ProcessingStage::Map:
+                return "Map";
+            case ProcessingStage::Reduce:
+                return "Reduce";
+            default:
+                return "Unknown";
+        }
+    }
+
+    // Return the string equivalent of the ProcessingStatus
+    std::string getProcessingStatusString(ProcessingStatus status) {
+        switch (status) {
+            case ProcessingStatus::Error:
+                return "Error";
+            case ProcessingStatus::NotStarted:
+                return "NotStarted";
+            case ProcessingStatus::SentToStub:
+                return "SentToStub";
+            case ProcessingStatus::InProgress:
+                return "InProgress";
+            case ProcessingStatus::Complete:
+                return "Complete";
+            default:
+                return "Unknown";
+        }
+    }
+
     // Print the contents of the files vector
     void printFiles() {
         std::lock_guard<std::mutex> lock(this->coutMutex);
         std::cout << "Files: " << std::endl;
         for (const auto& file : files) {
-            std::cout << "File ID: " << file.fileId << "; File Name: " << file.fileName << "; Stage: " << static_cast<int>(file.stage) << "; Status: " << static_cast<int>(file.status) << std::endl;
+            std::cout << "File ID: " << file.fileId << "; File Name: " << file.fileName << "; Stage: " << this->getProcessingStageString(file.stage) << "; Status: " << this->getProcessingStatusString(file.status) << std::endl;
         }
         std::cout << std::endl;
     }
@@ -775,7 +805,7 @@ class TaskManager {
         std::lock_guard<std::mutex> lock(this->coutMutex);
         std::cout << "Tasks: " << std::endl;
         for (const auto& task : tasks) {
-            std::cout << "Task ID: " << task.taskId << "; File ID: " << task.fileId << "; Stub ID: " << task.stubId << "; Batch ID: " << task.batchId << "; Stage: " << static_cast<int>(task.stage) << "; Status: " << static_cast<int>(task.status) << std::endl;
+            std::cout << "Task ID: " << task.taskId << "; File ID: " << task.fileId << "; Stub ID: " << task.stubId << "; Batch ID: " << task.batchId << "; Stage: " << this->getProcessingStageString(task.stage) << "; Status: " << this->getProcessingStatusString(task.status) << std::endl;
         }
         std::cout << std::endl;
     }
@@ -785,7 +815,7 @@ class TaskManager {
         std::lock_guard<std::mutex> lock(this->coutMutex);
         std::cout << "Batches: " << std::endl;
         for (const auto& batch : batches) {
-            std::cout << "Batch ID: " << batch.batchId << "; Stub ID: " << batch.stubId << "; Stage: " << static_cast<int>(batch.stage) << "; Status: " << static_cast<int>(batch.status) << std::endl;
+            std::cout << "Batch ID: " << batch.batchId << "; Stub ID: " << batch.stubId << "; Stage: " << this->getProcessingStageString(batch.stage) << "; Status: " << this->getProcessingStatusString(batch.status) << std::endl;
         }
         std::cout << std::endl;
     }
@@ -796,11 +826,11 @@ class TaskManager {
         std::cout << "TaskManager: " << std::endl;
         std::cout << "Files: " << std::endl;
         for (const auto& file : files) {
-            std::cout << "File ID: " << file.fileId << "; File Name: " << file.fileName << "; Stage: " << static_cast<int>(file.stage) << "; Status: " << static_cast<int>(file.status) << std::endl;
+            std::cout << "File ID: " << file.fileId << "; File Name: " << file.fileName << "; Stage: " << this->getProcessingStageString(file.stage) << "; Status: " << this->getProcessingStatusString(file.status) << std::endl;
         }
         std::cout << "Tasks: " << std::endl;
         for (const auto& task : tasks) {
-            std::cout << "Task ID: " << task.taskId << "; File ID: " << task.fileId << "; Stub ID: " << task.stubId << "; Batch ID: " << task.batchId << "; Stage: " << static_cast<int>(task.stage) << "; Status: " << static_cast<int>(task.status) << std::endl;
+            std::cout << "Task ID: " << task.taskId << "; File ID: " << task.fileId << "; Stub ID: " << task.stubId << "; Batch ID: " << task.batchId << "; Stage: " << this->getProcessingStageString(task.stage) << "; Status: " << this->getProcessingStatusString(task.status) << std::endl;
         }
         std::cout << "Batches: " << std::endl;
         for (const auto& batch : batches) {
@@ -808,7 +838,7 @@ class TaskManager {
             for (const auto& taskId : batch.taskIds) {
                 taskIdsStr += std::to_string(taskId) + " ";
             }
-            std::cout << "Batch ID: " << batch.batchId << "; Stub ID: " << batch.stubId << "; Stage: " << static_cast<int>(batch.stage) << "; Status: " << static_cast<int>(batch.status) << "; TaskIds: " << taskIdsStr << std::endl;
+            std::cout << "Batch ID: " << batch.batchId << "; Stub ID: " << batch.stubId << "; Stage: " << this->getProcessingStageString(batch.stage) << "; Status: " << this->getProcessingStatusString(batch.status) << "; TaskIds: " << taskIdsStr << std::endl;
         }
         std::cout << std::endl;
     }
