@@ -119,8 +119,10 @@ test-ThreadManager: build-ThreadManager
 test: test-map test-reduce test-filmgr test-workflow
 
 # Remove compiled binaries, output files, and temp files
-clean:
+clean: clean-workdir
 	@ find ./bin/ ! -name '.gitignore' -type f -exec rm -f {} +
+
+clean-workdir:
 	@ rm -rf workdir/temp
 	@ rm -rf workdir/output
 	@ rm -rf tests/workdir/temp

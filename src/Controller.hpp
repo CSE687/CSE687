@@ -107,16 +107,6 @@ class StubHeartbeat {
         return std::chrono::system_clock::now() - this->timeLastHeartbeatSent;
     }
 
-   public:
-    std::mutex mutex;
-
-    StubHeartbeat(int heartbeatCadenceSeconds) : unresponsiveHeartbeatsSent(0), heartbeatCadenceSeconds(std::chrono::seconds(heartbeatCadenceSeconds)) {
-        // Initialize time points to the current time
-        timeLastMessageSent = std::chrono::system_clock::now();
-        timeLastMessageReceived = std::chrono::system_clock::now();
-        timeLastHeartbeatSent = std::chrono::system_clock::now();
-    }
-
     void setTimeLastMessageSent(const std::chrono::system_clock::time_point& time) {
         timeLastMessageSent = time;
     }
@@ -130,16 +120,18 @@ class StubHeartbeat {
         timeLastHeartbeatSent = time;
     }
 
-    void setHeartbeatCadenceSeconds(const std::chrono::duration<double>& cadence) {
-        heartbeatCadenceSeconds = cadence;
-    }
-
-    void incrementUnresponsiveHeartbeatsSent() {
-        unresponsiveHeartbeatsSent++;
-    }
-
     void resetUnresponsiveHeartbeatsSent() {
         unresponsiveHeartbeatsSent = 0;
+    }
+
+   public:
+    std::mutex mutex;
+
+    StubHeartbeat(int heartbeatCadenceSeconds) : unresponsiveHeartbeatsSent(0), heartbeatCadenceSeconds(std::chrono::seconds(heartbeatCadenceSeconds)) {
+        // Initialize time points to the current time
+        timeLastMessageSent = std::chrono::system_clock::now();
+        timeLastMessageReceived = std::chrono::system_clock::now();
+        timeLastHeartbeatSent = std::chrono::system_clock::now();
     }
 
     std::chrono::system_clock::time_point getTimeLastMessageSent() const {
@@ -169,6 +161,20 @@ class StubHeartbeat {
             return true;
         }
         return false;
+    }
+
+    void incrementHeartbeatsSent() {
+        unresponsiveHeartbeatsSent++;
+    }
+
+    // notify StubHeartBeat that a message has been received
+    void messageReceived() {
+        this->setTimeLastMessageReceived(std::chrono::system_clock::now());
+    }
+
+    // notify StubHeartBeat that a message has been sent
+    void messageSent() {
+        this->setTimeLastMessageSent(std::chrono::system_clock::now());
     }
 };
 
@@ -253,10 +259,6 @@ class StubConnection {
         this->writeConsole(std::cout, "receiveThread started\n");
         while (true) {
             while (isAlive) {
-                // Sleep for 100ms
-                // this->writeConsole(std::cout, "receiveMessages sleeping\n");
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
                 // Receive and convert the message to PropertyTree object
                 boost::array<char, 128> buf;
                 boost::system::error_code error;
@@ -279,6 +281,7 @@ class StubConnection {
                 boost::property_tree::ptree receivedPTree;
                 try {
                     boost::property_tree::read_json(ss, receivedPTree);
+                    this->heartbeat.messageReceived();
                 } catch (const boost::property_tree::json_parser_error& e) {
                     // Handle the exception (e.g., print error message)
                     this->writeConsole(std::cerr, "Failed to read JSON: " + std::string(e.what()) + "\n");
@@ -287,9 +290,9 @@ class StubConnection {
 
                 // Safely read the message_type key from the received PropertyTree object
                 try {
-                    std::string message = receivedPTree.get<std::string>("message_type");
+                    std::string message_type = receivedPTree.get<std::string>("message_type");
                     // If the message type is "ack", continue
-                    if (message == "ack") {
+                    if (message_type == "ack") {
                         this->writeConsole(std::cout, "Received ack from stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
                         continue;
                     } else {
@@ -306,6 +309,9 @@ class StubConnection {
                     this->writeConsole(std::cerr, "Failed to read 'message_type' key from receivedPTree: " + std::string(e.what()) + "\n");
                     continue;
                 }
+                // Sleep for 100ms
+                this->writeConsole(std::cout, "receiveMessages sleeping\n");
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
             // Sleep for 1s if the connection is not alive
             this->writeConsole(std::cout, "!isAlive: receiveMessages sleeping\n");
@@ -319,10 +325,6 @@ class StubConnection {
         this->writeConsole(std::cout, "sendThread started\n");
         while (true) {
             while (this->isAlive) {
-                // Sleep for 100ms
-                // this->writeConsole(std::cout, "sendMessages sleeping\n");
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
                 // Check if there are PropertyTree objects in sendPTreeQueue
                 this->sendPTreeQueue.queueMutex.lock();
                 if (sendPTreeQueue.hasMessage()) {
@@ -345,6 +347,9 @@ class StubConnection {
                     }
                 }
                 this->sendPTreeQueue.queueMutex.unlock();
+                // Sleep for 100ms
+                // this->writeConsole(std::cout, "sendMessages sleeping\n");
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
             // Sleep for 1s if the connection is not alive
             this->writeConsole(std::cout, "!isAlive: sendMessages sleeping\n");
@@ -368,8 +373,11 @@ class StubConnection {
         pt.put("message_type", "heartbeat");
         pt.put("message", "heartbeat");
 
-        this->heartbeat.incrementUnresponsiveHeartbeatsSent();
+        // Lock heartbeat
         this->writeConsole(std::cout, "Writing heartbeat to Stub " + std::to_string(this->stub_id) + " sendPTreeQueue. Unresponsive Count: " + std::to_string(this->heartbeat.getUnresponsiveHeartbeatsSent()) + "\n");
+        this->heartbeat.mutex.lock();
+        this->heartbeat.incrementHeartbeatsSent();
+        this->heartbeat.mutex.unlock();
         std::lock_guard<std::mutex> lock(this->sendPTreeQueue.queueMutex);
         this->sendPTreeQueue.push(pt);
     };
@@ -389,7 +397,7 @@ class StubConnection {
         boost::asio::write(this->socket, boost::asio::buffer(jsonString));
 
         // Update the last message sent time
-        this->heartbeat.setTimeLastMessageSent(std::chrono::system_clock::now());
+        this->heartbeat.messageSent();
     }
 
     // set isAlive to false
@@ -937,6 +945,8 @@ class Controller {
                 }
             } else if (this->taskManager->allMapBatchesComplete() && this->taskManager->allReduceBatchesComplete()) {
                 // All batches are complete, exit the loop - we done
+                this->writeConsole(std::cout, "All batches complete, exiting\n");
+                this->taskManager->print();
                 break;
             }
 
@@ -967,10 +977,13 @@ class Controller {
                             //  set the batch status to the status from the message
                             if (status == "InProgress") {
                                 this->taskManager->setBatchStatus(batchId, ProcessingStatus::InProgress);
+                                this->taskManager->printBatches();
                             } else if (status == "Complete") {
                                 this->taskManager->setBatchStatus(batchId, ProcessingStatus::Complete);
+                                this->taskManager->printBatches();
                             } else if (status == "Error") {
                                 this->taskManager->setBatchStatus(batchId, ProcessingStatus::Error);
+                                this->taskManager->printBatches();
                             }
                         } else if (messageType == "connection_closed") {
                             // get the BatchIds which are running on the stub and set their status to NotStarted
@@ -985,8 +998,8 @@ class Controller {
                     } catch (const boost::property_tree::ptree_bad_path& e) {
                         this->writeConsole(std::cout, "Property tree node does not exist: " + std::string(e.what()) + "\n");
                     }
-                    stubConnection->receivePTreeQueue.queueMutex.unlock();
                 }
+                stubConnection->receivePTreeQueue.queueMutex.unlock();
             }
         }
     };
