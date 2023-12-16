@@ -109,7 +109,7 @@ std::vector<std::string> Stub::getFileList(std::string file_message) {
     std::string file;
     std::vector<std::string> file_list;
     while (!ss.eof()) {
-        std::getline(ss, file, ' ');
+        std::getline(ss, file, ',');
         file_list.push_back(file);
     }
     return file_list;
