@@ -216,7 +216,7 @@ class StubConnection {
                 if (!error) {
                     this->writeConsole(std::cout, "Established connection to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
 
-                    // Place the pt object in the sendPTreeBuffer
+                    // Place the pt object in the sendPTreeQueue
                     boost::property_tree::ptree pt;
                     pt.put("message_type", "establish_connection");
                     pt.put("message", "Establish connection to stub");
@@ -224,11 +224,11 @@ class StubConnection {
                     pt.put("output_directory", output_directory);
                     pt.put("temp_directory", temp_directory);
 
-                    // Add the ptree to the sendPTreeBuffer
-                    this->sendPTreeBuffer.queueMutex.lock();
-                    this->sendPTreeBuffer.push(pt);
+                    // Add the ptree to the sendPTreeQueue
+                    this->sendPTreeQueue.queueMutex.lock();
+                    this->sendPTreeQueue.push(pt);
                     this->isAlive = true;
-                    this->sendPTreeBuffer.queueMutex.unlock();
+                    this->sendPTreeQueue.queueMutex.unlock();
                 } else {
                     this->writeConsole(std::cerr, "Failed to establish connection to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n" + "Error: " + error.message() + "\n");
                     // Sleep before attempting to reconnect
@@ -248,7 +248,7 @@ class StubConnection {
         this->writeConsole(std::cout, "connectThread ending\n");
     }
 
-    // Function to continuously listen for messages on the socket and append them to receivePTreeBuffer
+    // Function to continuously listen for messages on the socket and append them to receivePTreeQueue
     void receiveMessages() {
         this->writeConsole(std::cout, "receiveThread started\n");
         while (true) {
@@ -285,7 +285,7 @@ class StubConnection {
                     continue;
                 }
 
-                // Append the received PropertyTree object to receivePTreeBuffer
+                // Append the received PropertyTree object to receivePTreeQueue
                 this->heartbeat.setTimeLastMessageReceived(std::chrono::system_clock::now());
 
                 // If the message type is "ack", continue
@@ -294,11 +294,11 @@ class StubConnection {
                     continue;
                 } else {
                     this->writeConsole(std::cout, "Received message from stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
-                    this->writeConsole(std::cout, "Writing message to Stub " + std::to_string(this->stub_id) + " receivePTreeBuffer\n");
+                    this->writeConsole(std::cout, "Writing message to Stub " + std::to_string(this->stub_id) + " receivePTreeQueue\n");
 
-                    this->receivePTreeBuffer.queueMutex.lock();
-                    receivePTreeBuffer.push(receivedPTree);
-                    this->receivePTreeBuffer.queueMutex.unlock();
+                    this->receivePTreeQueue.queueMutex.lock();
+                    receivePTreeQueue.push(receivedPTree);
+                    this->receivePTreeQueue.queueMutex.unlock();
                 }
             }
             // Sleep for 1s if the connection is not alive
@@ -308,7 +308,7 @@ class StubConnection {
         this->writeConsole(std::cout, "receiveThread ending\n");
     }
 
-    // Function to continuously monitor sendPTreeBuffer and send PropertyTree objects on the socket
+    // Function to continuously monitor sendPTreeQueue and send PropertyTree objects on the socket
     void sendMessages() {
         this->writeConsole(std::cout, "sendThread started\n");
         while (true) {
@@ -317,13 +317,13 @@ class StubConnection {
                 // this->writeConsole(std::cout, "sendMessages sleeping\n");
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-                // Check if there are PropertyTree objects in sendPTreeBuffer
-                this->sendPTreeBuffer.queueMutex.lock();
-                if (sendPTreeBuffer.hasMessage()) {
+                // Check if there are PropertyTree objects in sendPTreeQueue
+                this->sendPTreeQueue.queueMutex.lock();
+                if (sendPTreeQueue.hasMessage()) {
                     this->writeConsole(std::cout, "Sending message to stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
 
-                    // Pop the PropertyTree object from sendPTreeBuffer
-                    boost::property_tree::ptree pt = sendPTreeBuffer.pop();
+                    // Pop the PropertyTree object from sendPTreeQueue
+                    boost::property_tree::ptree pt = sendPTreeQueue.pop();
 
                     // Convert the PropertyTree object to a JSON string
                     std::ostringstream buf;
@@ -338,7 +338,7 @@ class StubConnection {
                         this->setIsAliveFalse();
                     }
                 }
-                this->sendPTreeBuffer.queueMutex.unlock();
+                this->sendPTreeQueue.queueMutex.unlock();
             }
             // Sleep for 1s if the connection is not alive
             this->writeConsole(std::cout, "!isAlive: sendMessages sleeping\n");
@@ -363,9 +363,9 @@ class StubConnection {
         pt.put("message", "heartbeat");
 
         this->heartbeat.incrementUnresponsiveHeartbeatsSent();
-        this->writeConsole(std::cout, "Writing heartbeat to Stub " + std::to_string(this->stub_id) + " sendPTreeBuffer. Unresponsive Count: " + std::to_string(this->heartbeat.getUnresponsiveHeartbeatsSent()) + "\n");
-        std::lock_guard<std::mutex> lock(this->sendPTreeBuffer.queueMutex);
-        this->sendPTreeBuffer.push(pt);
+        this->writeConsole(std::cout, "Writing heartbeat to Stub " + std::to_string(this->stub_id) + " sendPTreeQueue. Unresponsive Count: " + std::to_string(this->heartbeat.getUnresponsiveHeartbeatsSent()) + "\n");
+        std::lock_guard<std::mutex> lock(this->sendPTreeQueue.queueMutex);
+        this->sendPTreeQueue.push(pt);
     };
 
     // Send a message to the stub
@@ -392,26 +392,26 @@ class StubConnection {
         this->isAlive = false;
 
         // Clear the send and receive buffers
-        std::lock(this->sendPTreeBuffer.queueMutex, this->receivePTreeBuffer.queueMutex);
+        std::lock(this->sendPTreeQueue.queueMutex, this->receivePTreeQueue.queueMutex);
 
         // Clear the buffers
-        this->sendPTreeBuffer.clear();
-        this->receivePTreeBuffer.clear();
+        this->sendPTreeQueue.clear();
+        this->receivePTreeQueue.clear();
 
-        // Place message in receivePTreeBuffer to notify the Controller that the connection is no longer alive
+        // Place message in receivePTreeQueue to notify the Controller that the connection is no longer alive
         boost::property_tree::ptree pt;
         pt.put("message_type", "connection_closed");
-        this->receivePTreeBuffer.push(pt);
+        this->receivePTreeQueue.push(pt);
 
         // Unlock buffers
-        this->sendPTreeBuffer.queueMutex.unlock();
-        this->receivePTreeBuffer.queueMutex.unlock();
+        this->sendPTreeQueue.queueMutex.unlock();
+        this->receivePTreeQueue.queueMutex.unlock();
     }
 
    public:
     // circular buffer for property_tree
-    PropertyTreeQueue receivePTreeBuffer;
-    PropertyTreeQueue sendPTreeBuffer;
+    PropertyTreeQueue receivePTreeQueue;
+    PropertyTreeQueue sendPTreeQueue;
 
     StubConnection(int stub_id,
                    int port,
@@ -427,8 +427,8 @@ class StubConnection {
                                                       isAlive(false),
                                                       socket(io_context),
                                                       coutMutex(coutMutex),
-                                                      receivePTreeBuffer(coutMutex, stub_id),
-                                                      sendPTreeBuffer(coutMutex, stub_id),
+                                                      receivePTreeQueue(coutMutex, stub_id),
+                                                      sendPTreeQueue(coutMutex, stub_id),
                                                       heartbeat(heartbeatCadenceSeconds) {
     }
 
@@ -842,7 +842,7 @@ class Controller {
             // Complete all Map Batches before moving on to Reduce Batches
             if (!this->taskManager->allMapBatchesComplete()) {
                 // this->writeConsole(std::cout, "Map Batches not complete\n");
-                // Place all Map Batch tasks with status NotStarted into the sendPTreeBuffer
+                // Place all Map Batch tasks with status NotStarted into the sendPTreeQueue
                 for (const auto& batch : this->taskManager->getMapBatches()) {
                     // Verify that the batch status is NotStarted and that the stubId isAlive
                     if (batch.status == ProcessingStatus::NotStarted && this->stubConnections[batch.stubId]->getIsAlive()) {
@@ -872,19 +872,19 @@ class Controller {
                         boost::property_tree::write_json(buf, pt, false);
                         std::string jsonString = buf.str();
                         // write the message to the console
-                        this->writeConsole(std::cout, "Writing message to Stub " + std::to_string(batch.stubId) + " sendPTreeBuffer: " + jsonString + "\n");
+                        this->writeConsole(std::cout, "Writing message to Stub " + std::to_string(batch.stubId) + " sendPTreeQueue: " + jsonString + "\n");
 
-                        // Add the ptree to the assigned stubId's sendPTreeBuffer
-                        this->stubConnections[batch.stubId]->sendPTreeBuffer.queueMutex.lock();
-                        this->stubConnections[batch.stubId]->sendPTreeBuffer.push(pt);
-                        this->stubConnections[batch.stubId]->sendPTreeBuffer.queueMutex.unlock();
+                        // Add the ptree to the assigned stubId's sendPTreeQueue
+                        this->stubConnections[batch.stubId]->sendPTreeQueue.queueMutex.lock();
+                        this->stubConnections[batch.stubId]->sendPTreeQueue.push(pt);
+                        this->stubConnections[batch.stubId]->sendPTreeQueue.queueMutex.unlock();
 
                         // Set the batch status to SentToStub
                         this->taskManager->setBatchStatus(batch.batchId, ProcessingStatus::SentToStub);
                     }
                 }
             } else if (!this->taskManager->allReduceBatchesComplete()) {
-                // Place all Reduce Batch tasks with status NotStarted into the sendPTreeBuffer
+                // Place all Reduce Batch tasks with status NotStarted into the sendPTreeQueue
                 for (const auto& batch : this->taskManager->getReduceBatches()) {
                     if (batch.status == ProcessingStatus::NotStarted && this->stubConnections[batch.stubId]->getIsAlive()) {
                         // Create a ptree object
@@ -908,10 +908,10 @@ class Controller {
                         files.put("", fileNamesStr);
                         pt.add_child("files", files);
 
-                        // Add the ptree to the assigned stubId's sendPTreeBuffer
-                        this->stubConnections[batch.stubId]->sendPTreeBuffer.queueMutex.lock();
-                        this->stubConnections[batch.stubId]->sendPTreeBuffer.push(pt);
-                        this->stubConnections[batch.stubId]->sendPTreeBuffer.queueMutex.unlock();
+                        // Add the ptree to the assigned stubId's sendPTreeQueue
+                        this->stubConnections[batch.stubId]->sendPTreeQueue.queueMutex.lock();
+                        this->stubConnections[batch.stubId]->sendPTreeQueue.push(pt);
+                        this->stubConnections[batch.stubId]->sendPTreeQueue.queueMutex.unlock();
 
                         // Set the batch status to SentToStub
                         this->taskManager->setBatchStatus(batch.batchId, ProcessingStatus::SentToStub);
@@ -924,12 +924,12 @@ class Controller {
 
             // Check for messages in message queues and act on them
             for (const auto& stubConnection : stubConnections) {
-                // Check if there are messages in the receivePTreeBuffer
-                stubConnection->receivePTreeBuffer.queueMutex.lock();
-                if (stubConnection->receivePTreeBuffer.hasMessage()) {
-                    // Pop the message from the receivePTreeBuffer
-                    boost::property_tree::ptree pt = stubConnection->receivePTreeBuffer.pop();
-                    stubConnection->receivePTreeBuffer.queueMutex.unlock();
+                // Check if there are messages in the receivePTreeQueue
+                stubConnection->receivePTreeQueue.queueMutex.lock();
+                if (stubConnection->receivePTreeQueue.hasMessage()) {
+                    // Pop the message from the receivePTreeQueue
+                    boost::property_tree::ptree pt = stubConnection->receivePTreeQueue.pop();
+                    stubConnection->receivePTreeQueue.queueMutex.unlock();
 
                     // Convert the ptree to a JSON string
                     std::ostringstream buf;
@@ -964,7 +964,7 @@ class Controller {
                         this->writeConsole(std::cout, "Unknown message type: " + messageType + "\n");
                     }
                 } else {
-                    stubConnection->receivePTreeBuffer.queueMutex.unlock();
+                    stubConnection->receivePTreeQueue.queueMutex.unlock();
                 }
             }
         }
