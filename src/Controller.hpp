@@ -956,32 +956,35 @@ class Controller {
                     // write the message to the console
                     this->writeConsole(std::cout, "Received message from Stub " + std::to_string(stubConnection->getStubId()) + ": " + jsonString + "\n");
 
-                    // Check the message type
-                    std::string messageType = pt.get<std::string>("message_type");
-                    if (messageType == "batch_status") {
-                        // Get the batch_id and status from the message
-                        int batchId = std::stoi(pt.get<std::string>("batch_id"));
-                        // convert message status to ProcessingStatus enum
-                        std::string status = pt.get<std::string>("status");
-                        //  set the batch status to the status from the message
-                        if (status == "InProgress") {
-                            this->taskManager->setBatchStatus(batchId, ProcessingStatus::InProgress);
-                        } else if (status == "Complete") {
-                            this->taskManager->setBatchStatus(batchId, ProcessingStatus::Complete);
-                        } else if (status == "Error") {
-                            this->taskManager->setBatchStatus(batchId, ProcessingStatus::Error);
-                        }
-                    } else if (messageType == "connection_closed") {
-                        // get the BatchIds which are running on the stub and set their status to NotStarted
-                        for (const auto& batch : this->taskManager->getBatches()) {
-                            if (batch.stubId == stubConnection->getStubId() && batch.status != ProcessingStatus::Complete) {
-                                this->taskManager->setBatchStatus(batch.batchId, ProcessingStatus::NotStarted);
+                    try {
+                        // Check the message type
+                        std::string messageType = pt.get<std::string>("message_type");
+                        if (messageType == "batch_status") {
+                            // Get the batch_id and status from the message
+                            int batchId = std::stoi(pt.get<std::string>("batch_id"));
+                            // convert message status to ProcessingStatus enum
+                            std::string status = pt.get<std::string>("status");
+                            //  set the batch status to the status from the message
+                            if (status == "InProgress") {
+                                this->taskManager->setBatchStatus(batchId, ProcessingStatus::InProgress);
+                            } else if (status == "Complete") {
+                                this->taskManager->setBatchStatus(batchId, ProcessingStatus::Complete);
+                            } else if (status == "Error") {
+                                this->taskManager->setBatchStatus(batchId, ProcessingStatus::Error);
                             }
+                        } else if (messageType == "connection_closed") {
+                            // get the BatchIds which are running on the stub and set their status to NotStarted
+                            for (const auto& batch : this->taskManager->getBatches()) {
+                                if (batch.stubId == stubConnection->getStubId() && batch.status != ProcessingStatus::Complete) {
+                                    this->taskManager->setBatchStatus(batch.batchId, ProcessingStatus::NotStarted);
+                                }
+                            }
+                        } else {
+                            this->writeConsole(std::cout, "Unknown message type: " + messageType + "\n");
                         }
-                    } else {
-                        this->writeConsole(std::cout, "Unknown message type: " + messageType + "\n");
+                    } catch (const boost::property_tree::ptree_bad_path& e) {
+                        this->writeConsole(std::cout, "Property tree node does not exist: " + std::string(e.what()) + "\n");
                     }
-                } else {
                     stubConnection->receivePTreeQueue.queueMutex.unlock();
                 }
             }
