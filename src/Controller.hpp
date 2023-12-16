@@ -34,7 +34,7 @@ class PropertyTreeQueue {
 
     PropertyTreeQueue(std::mutex& coutMutex, int stub_id) : coutMutex(coutMutex), stub_id(stub_id) {}
 
-    // push a message to the back of the buffer
+    // push a message to the back of the queue
     void push(const boost::property_tree::ptree& message) {
         // LOGGING //
         // Convert the ptree to a string, including the child elements
@@ -48,10 +48,10 @@ class PropertyTreeQueue {
         queue.push(message);
     }
 
-    // pop the first message from the buffer
+    // pop the first message from the queue
     boost::property_tree::ptree pop() {
         if (this->queue.empty()) {
-            this->writeConsole(std::cout, "Warning: Tried to retrieve message from CircularBuffer but no message exists\n");
+            this->writeConsole(std::cout, "Warning: Tried to retrieve message from PropertyTreeQueue but no message exists\n");
         }
 
         // Get the message from the front of the queue
@@ -70,12 +70,12 @@ class PropertyTreeQueue {
         return message;
     }
 
-    // check if the buffer has a message
+    // check if the queue has a message
     bool hasMessage() const {
         return !this->queue.empty();
     }
 
-    // remove all messages from the buffer
+    // remove all messages from the queue
     void clear() {
         while (!this->queue.empty()) {
             this->queue.pop();
