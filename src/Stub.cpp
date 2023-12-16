@@ -142,7 +142,7 @@ void Stub::startMapThreads(std::vector<std::string> input_files) {
     boost::property_tree::ptree inprogress;
     inprogress.put("message_type", "batch_status");
     inprogress.put("batch_id", this->stubProcess.batch_id);
-    inprogress.put("message", "InProgress");
+    inprogress.put("status", "InProgress");
     sendMessage(inprogress);
     // Initialize Thread Manager and launch map threads
     try {
@@ -170,7 +170,7 @@ void Stub::startReduceThreads(std::vector<std::string> input_files) {
     boost::property_tree::ptree inprogress;
     inprogress.put("message_type", "batch_status");
     inprogress.put("batch_id", this->stubProcess.batch_id);
-    inprogress.put("message", "InProgress");
+    inprogress.put("status", "InProgress");
     sendMessage(inprogress);
     // Initialize Thread Manager and launch reduce threads
     try {
