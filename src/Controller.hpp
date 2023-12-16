@@ -275,43 +275,62 @@ class StubConnection {
                 }
 
                 // Convert the received message to a PropertyTree object
-                std::string message(buf.data(), len);
-                std::stringstream ss;
-                ss << message;
-                boost::property_tree::ptree receivedPTree;
-                try {
-                    boost::property_tree::read_json(ss, receivedPTree);
-                    this->heartbeat.messageReceived();
-                } catch (const boost::property_tree::json_parser_error& e) {
-                    // Handle the exception (e.g., print error message)
-                    this->writeConsole(std::cerr, "Failed to read JSON: " + std::string(e.what()) + "\n");
-                    this->writeConsole(std::cerr, "Received message: " + message + "\n");
-                    continue;
+                std::string buffer_message(buf.data(), len);
+                std::vector<std::string> jsonStrings;
+
+                // Split buffer_message into separate JSON strings
+                size_t startPos = 0;
+                size_t endPos = buffer_message.find('\n');
+                while (endPos != std::string::npos) {
+                    std::string jsonString = buffer_message.substr(startPos, endPos - startPos);
+                    jsonStrings.push_back(jsonString);
+                    startPos = endPos + 1;
+                    endPos = buffer_message.find('\n', startPos);
                 }
 
-                // Safely read the message_type key from the received PropertyTree object
-                try {
-                    std::string message_type = receivedPTree.get<std::string>("message_type");
-                    // If the message type is "ack", continue
-                    if (message_type == "ack") {
-                        this->writeConsole(std::cout, "Received ack from stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
+                // Process each JSON string separately
+                for (const std::string& jsonString : jsonStrings) {
+                    boost::property_tree::ptree receivedPTree;
+                    std::stringstream stringStream;
+                    // Clear the stringStream
+                    stringStream.str("");
+                    stringStream.clear();
+
+                    stringStream << jsonString;
+
+                    try {
+                        boost::property_tree::read_json(stringStream, receivedPTree);
+                        this->heartbeat.messageReceived();
+                    } catch (const boost::property_tree::json_parser_error& e) {
+                        // Handle the exception (e.g., print error message)
+                        this->writeConsole(std::cerr, "Failed to read JSON: " + std::string(e.what()) + "\n");
+                        this->writeConsole(std::cerr, "Received message: " + jsonString + "\n");
                         continue;
-                    } else {
-                        // Append the received PropertyTree object to receivePTreeQueue
-                        this->writeConsole(std::cout, "Received message from stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
-                        this->writeConsole(std::cout, "Writing message to Stub " + std::to_string(this->stub_id) + " receivePTreeQueue\n");
-
-                        this->receivePTreeQueue.queueMutex.lock();
-                        receivePTreeQueue.push(receivedPTree);
-                        this->receivePTreeQueue.queueMutex.unlock();
                     }
-                } catch (const boost::property_tree::ptree_bad_path& e) {
-                    // Handle the exception (e.g., print error message)
-                    this->writeConsole(std::cerr, "Failed to read 'message_type' key from receivedPTree: " + std::string(e.what()) + "\n");
-                    continue;
+
+                    // Safely read the message_type key from the received PropertyTree object
+                    try {
+                        std::string message_type = receivedPTree.get<std::string>("message_type");
+                        // If the message type is "ack", continue
+                        if (message_type == "ack") {
+                            this->writeConsole(std::cout, "Received ack from stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
+                            continue;
+                        } else {
+                            // Append the received PropertyTree object to receivePTreeQueue
+                            this->writeConsole(std::cout, "Received message from stub " + std::to_string(this->stub_id) + " on port " + std::to_string(this->port) + "\n");
+                            this->writeConsole(std::cout, "Writing message to Stub " + std::to_string(this->stub_id) + " receivePTreeQueue\n");
+
+                            this->receivePTreeQueue.queueMutex.lock();
+                            receivePTreeQueue.push(receivedPTree);
+                            this->receivePTreeQueue.queueMutex.unlock();
+                        }
+                    } catch (const boost::property_tree::ptree_bad_path& e) {
+                        // Handle the exception (e.g., print error message)
+                        this->writeConsole(std::cerr, "Failed to read 'message_type' key from receivedPTree: " + std::string(e.what()) + "\n");
+                        continue;
+                    }
                 }
-                // Sleep for 100ms
-                this->writeConsole(std::cout, "receiveMessages sleeping\n");
+                // this->writeConsole(std::cout, "receiveMessages sleeping\n");
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
             // Sleep for 1s if the connection is not alive
