@@ -153,7 +153,7 @@ void Stub::startMapThreads(std::vector<std::string> input_files) {
         boost::property_tree::ptree complete;
         complete.put("message_type", "batch_status");
         complete.put("batch_id", this->stubProcess.batch_id);
-        complete.put("message", "Complete");
+        complete.put("status", "Complete");
         sendMessage(complete);
         this->stubProcess.process_lock.unlock();
     } catch (exception e) {
@@ -180,7 +180,7 @@ void Stub::startReduceThreads(std::vector<std::string> input_files) {
         boost::property_tree::ptree complete;
         complete.put("message_type", "batch_status");
         complete.put("batch_id", this->stubProcess.batch_id);
-        complete.put("message", "Complete");
+        complete.put("status", "Complete");
         sendMessage(complete);
     } catch (exception e) {
         // Send error back to sender
