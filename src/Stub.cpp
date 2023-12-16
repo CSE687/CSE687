@@ -65,31 +65,52 @@ void Stub::performTask(boost::property_tree::ptree message) {
         boost::property_tree::ptree ack;
         ack.put("message_type", "ack");
         sendMessage(ack);
-    } else if (message_type == "map") {
+    } else if (message_type == "map_task") {
         if (this->stubProcess.process_lock.try_lock()) {
-            std::vector<std::string> input_files = {
-                "workdir/input/Cymbeline.txt",
-                "workdir/input/TheTempest.txt"};
+            std::string file_list = message.get<std::string>("files");
+            std::vector<std::string> input_files = getFileList(file_list);
 
             this->stubProcess.process_thread = new boost::thread(&Stub::startMapThreads, this, input_files);
             this->stubProcess.process_thread->detach();
         } else {
             cout << "[Stub; Port: " << this->port_num << "]: Cannot run, another process is currently running.\n";
+            // Send error back to sender
+            boost::property_tree::ptree error;
+            error.put("message_type", "task_status");
+            error.put("batch_id", this->stubProcess.batch_id);
+            error.put("message", "Error");
+            sendMessage(error);
         }
-    } else if (message_type == "reduce") {
-        std::vector<std::string> temp_files = {
-            "workdir/temp/Cymbeline.txt",
-            "workdir/temp/TheTempest.txt"};
-
+    } else if (message_type == "reduce_task") {
         if (stubProcess.process_lock.try_lock()) {
+            std::string file_list = message.get<std::string>("files");
+            std::vector<std::string> temp_files = getFileList(file_list);
+
             this->stubProcess.process_thread = new boost::thread(&Stub::startReduceThreads, this, temp_files);
             this->stubProcess.process_thread->detach();
         } else {
             cout << "[Stub; Port: " << this->port_num << "]: Cannot run, another process is currently running.\n";
+            // Send error back to sender
+            boost::property_tree::ptree error;
+            error.put("message_type", "task_status");
+            error.put("batch_id", this->stubProcess.batch_id);
+            error.put("message", "Error");
+            sendMessage(error);
         }
     } else {
         std::cout << "[Stub; Port: " << this->port_num << "]: Received unkown message type.\n";
     }
+}
+
+std::vector<std::string> Stub::getFileList(std::string file_message) {
+    std::stringstream ss(file_message);
+    std::string file;
+    std::vector<std::string> file_list;
+    while (!ss.eof()) {
+        std::getline(ss, file, ' ');
+        file_list.push_back(file);
+    }
+    return file_list;
 }
 
 void Stub::sendMessage(const boost::property_tree::ptree message) {
@@ -116,30 +137,57 @@ void Stub::setupFileManager(std::string input_directory, std::string output_dire
 }
 
 void Stub::startMapThreads(std::vector<std::string> input_files) {
-    cout << "Starting map Threads\n";
+    boost::property_tree::ptree inprogress;
+    inprogress.put("message_type", "task_status");
+    inprogress.put("batch_id", this->stubProcess.batch_id);
+    inprogress.put("message", "InProgress");
+    sendMessage(inprogress);
     // Initialize Thread Manager and launch map threads
-    ThreadManager mapThreadMang(&input_files);
-    mapThreadMang.executeMapThreads();
+    try {
+        ThreadManager mapThreadMang(&input_files);
+        mapThreadMang.executeMapThreads();
 
-    // Send acknowledge message back to the sender
-    boost::property_tree::ptree ack;
-    ack.put("message_type", "task_status");
-    ack.put("message", "complete");
-    sendMessage(ack);
-    this->stubProcess.process_lock.unlock();
+        // Send acknowledge message back to the sender
+        boost::property_tree::ptree complete;
+        complete.put("message_type", "batch_status");
+        complete.put("batch_id", this->stubProcess.batch_id);
+        complete.put("message", "Complete");
+        sendMessage(complete);
+        this->stubProcess.process_lock.unlock();
+    } catch (exception e) {
+        // Send error back to sender
+        boost::property_tree::ptree error;
+        error.put("message_type", "task_status");
+        error.put("batch_id", this->stubProcess.batch_id);
+        error.put("message", "Error");
+        sendMessage(error);
+    }
 }
 
 void Stub::startReduceThreads(std::vector<std::string> input_files) {
-    cout << "Starting reduce Threads\n";
-    // Initialize Thread Manager and launch map threads
-    ThreadManager reduceThreadMang(&input_files);
-    reduceThreadMang.executeReduceThreads();
-
-    // Send acknowledge message back to the sender
-    boost::property_tree::ptree ack;
-    ack.put("message_type", "task_status");
-    ack.put("message", "complete");
-    sendMessage(ack);
+    boost::property_tree::ptree inprogress;
+    inprogress.put("message_type", "task_status");
+    inprogress.put("batch_id", this->stubProcess.batch_id);
+    inprogress.put("message", "InProgress");
+    sendMessage(inprogress);
+    // Initialize Thread Manager and launch reduce threads
+    try {
+        ThreadManager reduceThreadMang(&input_files);
+        reduceThreadMang.executeReduceThreads();
+        // Send acknowledge message back to the sender
+        boost::property_tree::ptree complete;
+        complete.put("message_type", "task_status");
+        complete.put("batch_id", this->stubProcess.batch_id);
+        complete.put("message", "Complete");
+        sendMessage(complete);
+    } catch (exception e) {
+        // Send error back to sender
+        boost::property_tree::ptree error;
+        error.put("message_type", "task_status");
+        error.put("batch_id", this->stubProcess.batch_id);
+        error.put("message", "error");
+        sendMessage(error);
+    }
     this->stubProcess.process_lock.unlock();
 }
 

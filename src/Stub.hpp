@@ -28,7 +28,7 @@ from a controller server to run map or reduce task threads.
 struct stubTask {
     boost::mutex process_lock;
     boost::thread* process_thread;
-    int task_id;
+    int batch_id;
 };
 
 class Stub {
@@ -47,6 +47,7 @@ class Stub {
     void receiveMessage(std::string message);                                                                      // receives and parses the message type from controller
     void sendMessage(const boost::property_tree::ptree message);                                                   // sends message back to controller
     void performTask(const boost::property_tree::ptree message);                                                   // performs task requested by controller
+    std::vector<std::string> getFileList(std::string file_message);
 
    public:
     FileManager* filemanager;  // filemanager instance
