@@ -655,6 +655,11 @@ class TaskManager {
 
     // Set the status of a batch
     void setBatchStatus(int batchId, ProcessingStatus status) {
+        // Check if batchId exists, if not - log and error and return
+        if (batchId >= batches.size() || batchId < 0) {
+            this->writeConsole(std::cout, "Error: batchId " + std::to_string(batchId) + " does not exist\n");
+            return;
+        }
         batches[batchId].status = status;
         // Set the status of all tasks in the batch
         for (const auto& taskId : batches[batchId].taskIds) {
