@@ -260,7 +260,7 @@ class StubConnection {
         while (true) {
             while (isAlive) {
                 // Receive and convert the message to PropertyTree object
-                boost::array<char, 128> buf;
+                boost::array<char, 496> buf;
                 boost::system::error_code error;
                 size_t len = socket.read_some(boost::asio::buffer(buf), error);
 
@@ -285,6 +285,7 @@ class StubConnection {
                 } catch (const boost::property_tree::json_parser_error& e) {
                     // Handle the exception (e.g., print error message)
                     this->writeConsole(std::cerr, "Failed to read JSON: " + std::string(e.what()) + "\n");
+                    this->writeConsole(std::cerr, "Received message: " + message + "\n");
                     continue;
                 }
 

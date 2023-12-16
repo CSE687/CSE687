@@ -119,7 +119,6 @@ void Stub::sendMessage(const boost::property_tree::ptree message) {
     std::ostringstream buf;
     boost::property_tree::write_json(buf, message, false);
     std::string jsonString = buf.str();
-    // jsonString += "\n";
 
     // Send the JSON string to the stub
     boost::asio::write(this->socket, boost::asio::buffer(jsonString));
