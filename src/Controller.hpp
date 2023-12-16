@@ -547,6 +547,13 @@ class TaskManager {
         batches.push_back(batch);
     }
 
+    void writeConsole(std::ostream& outputStream, const std::string& message) {
+        std::lock_guard<std::mutex> lock(this->coutMutex);
+        std::string messageWithPrefix = "TaskManager: ";
+        outputStream << messageWithPrefix << message;
+        outputStream.flush();
+    };
+
    public:
     // Constructor takes a vector of files, vector of stubIds
     TaskManager(std::vector<std::string> filePaths, std::vector<int> stubIds, std::mutex& coutMutex) : coutMutex(coutMutex) {
