@@ -20,6 +20,7 @@ build:
 		src/Workflow.cpp \
 		src/threadManager.cpp \
 		src/PropertyTreeQueue.cpp \
+		src/StubHeartbeat.cpp \
 		-o bin/$(NAME) \
 		$(STD) $(BOOST) $(DLL)
 
