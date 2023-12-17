@@ -22,6 +22,7 @@ build:
 		src/PropertyTreeQueue.cpp \
 		src/StubHeartbeat.cpp \
 		src/StubConnection.cpp \
+		src/TaskManager.cpp \
 		-o bin/$(NAME) \
 		$(STD) $(BOOST) $(DLL)
 
