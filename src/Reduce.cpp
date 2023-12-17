@@ -35,7 +35,7 @@ void Reduce::execute(const std::string &input_file) {
     // Write SUCCESS file to output directory
     this->fileManager->writeFile(fileManager->getOutputDirectory(), this->outputFilename + "-SUCCESS", "");
     // remove temp directory
-    // fileManager->remove(input_file);
+    fileManager->remove(input_file);
 }
 
 void Reduce::exportResult(const std::string &key, int value) {
@@ -63,7 +63,7 @@ std::string Reduce::toString() {
 
 void Reduce::sort(const std::string &input_file) {
     // Sort & Reduce all of the files output by Mapper
-    std::vector<std::string> file_lines = this->fileManager->readFile(input_file);
+    std::vector<std::string> file_lines = this->fileManager->readFile(fileManager->getTempDirectory(), input_file);
 
     for (std::string j : file_lines) {
         if (j.empty()) {

@@ -89,10 +89,10 @@ Winter 2023 class project
   - Sort Class
   - Sort Optimization
 - Chandler
-  - [ ] How do DLL's work?
-  - [ ] If Reduce & Map share a Base class - does the base class need a DLL?
-  - [ ] Does it need to be in a shared DLL?
-  - [ ] Explicit is preferred
+  - [X] How do DLL's work?
+  - [X] If Reduce & Map share a Base class - does the base class need a DLL?
+  - [X] Does it need to be in a shared DLL?
+  - [X] Explicit is preferred
 
 ## Phase 3
 
@@ -118,7 +118,7 @@ Due week after midterm
   - Dev: Chandler
 - [ ] Directly combine Sort/Reduce (map<string, vector<int>> -> map<string, int>)
   - Dev: Wes
-- [ ] Documentation
+- [X] Documentation
   - Dev: Chandler
 
 ## Phase 4
@@ -138,6 +138,25 @@ Due 2 weeks after Phase 3
   input_file: str
   output_directory: str
 }
+
+# SOLD
+{  # From Controller to Stub: Do this task
+  "message_type": "map_task" / "reduce_task"
+  "batch_id": int
+  "files": "<List[fileName]>"
+}
+
+# SOLD
+{ # From Stub to Controller: completed task
+  "message_type": "batch_status"
+  "batch_id": int
+  "status": "InProgress", "Complete", "Error"
+}
+
+// Stub preference is List<fileName>
+// How many files per map/reduce task?
+// map: # files / # stubs
+// reduce: # files / # stubs
 ```
 
 1. Controller iterates through files in `input_directory`
@@ -170,7 +189,7 @@ Due 2 weeks after Phase 3
 Controller CLI Command
 
 ```
-./bin/project-03 controller workdir/input workdir/output workdir/temp 9001 9002 9003
+./bin/project-03 controller 9000 workdir/input workdir/output workdir/temp 9001 9002 9003
 ```
 
 Stub CLI Command
@@ -184,3 +203,4 @@ Stub CLI Command
 - What to do if process dies
   - Options:
     - Just log it on controller after X missed heartbeats with stub
+    - Stub Status: Ded

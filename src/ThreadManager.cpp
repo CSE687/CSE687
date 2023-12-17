@@ -2,8 +2,8 @@
 
 // Assigns arugments to member variables containing pointer to a FileManager instance
 // and a vector of input files
-ThreadManager::ThreadManager(FileManager* filemgr, vector<string>* inputFiles) {
-    fileManager = filemgr;
+ThreadManager::ThreadManager(vector<string>* inputFiles) {
+    fileManager = FileManager::GetInstance();
     input_files = inputFiles;
 }
 

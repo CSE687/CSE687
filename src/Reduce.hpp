@@ -9,6 +9,8 @@
 
     The execute method itself should not directly deal with any File IO.
 */
+#ifndef REDUCE_H
+#define REDUCE_H
 
 #include <algorithm>
 #include <map>
@@ -17,9 +19,6 @@
 
 #include "Executor.hpp"
 #include "FileManager.hpp"
-
-#ifndef REDUCE_H
-#define REDUCE_H
 
 /**
  * @brief A class that reduces a vector of integers to a single integer sum and writes it to disk.
