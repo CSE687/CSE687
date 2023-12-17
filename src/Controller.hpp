@@ -1,10 +1,7 @@
 #ifndef CONTROLLER_HPP
 #define CONTROLLER_HPP
 
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
 #include <iostream>
-#include <mutex>
 #include <string>
 #include <vector>
 
