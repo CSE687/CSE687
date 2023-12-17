@@ -11,11 +11,10 @@ boost::mutex reduce_cout_mutex;
 Reduce::Reduce(std::string outputFilename) {
     this->fileManager = FileManager::GetInstance();
     this->outputFilename = outputFilename;
-
-    buffer.reserve(bufferSize);
-
     // creates a blank file and overwrites any pre-existing files with same name
     this->fileManager->writeFile(this->fileManager->getOutputDirectory(), this->outputFilename, "");
+
+    buffer.reserve(bufferSize);
 }
 
 int Reduce::_sum_iterator(const std::vector<int> &values) {
@@ -34,8 +33,9 @@ void Reduce::execute(const std::string &input_file) {
 
     // Write SUCCESS file to output directory
     this->fileManager->writeFile(fileManager->getOutputDirectory(), this->outputFilename + "-SUCCESS", "");
-    // remove temp directory
-    fileManager->remove(input_file);
+
+    // remove temp file
+    fileManager->deleteFile(fileManager->getTempDirectory(), input_file);
 }
 
 void Reduce::exportResult(const std::string &key, int value) {

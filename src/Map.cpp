@@ -18,6 +18,9 @@ Map::Map() {
 // Tokenize the line from the input file, write each tokenized word to disk, and return number of words tokenized
 int Map::map(std::string filename, std::string line) {
     this->outputFilename = filename;
+    // creates a blank file and overwrites any pre-existing files with same name
+    this->fileManager->writeFile(this->fileManager->getTempDirectory(), this->outputFilename, "");
+
     std::vector<std::string> words = tokenize(line);
     for (std::string word : words) {
         exportData(word);
