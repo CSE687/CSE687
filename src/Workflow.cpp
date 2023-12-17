@@ -37,6 +37,8 @@ void Workflow::executeMap(std::string filename, int threadID) {
     vector<string> contents;
     try {
         contents = fileManager->readFile(fileManager->getInputDirectory(), filename);
+        // creates a blank file and overwrites any pre-existing files with same name
+        this->fileManager->writeFile(this->fileManager->getTempDirectory(), filename, "");
     } catch (exception& e) {
         workflow_cout_mutex.lock();
         std::cout << "File '" << filename << "' could not be opened; skipping." << endl;
